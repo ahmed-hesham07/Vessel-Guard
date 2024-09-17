@@ -80,24 +80,20 @@ Vessel Guard is a Tkinter-based GUI application designed to assist engineers in 
 ## Screenshots
 
 ### Plant Information Form
-![Plant Information](./screenshots/plant_info.png)
+![Plant Information](plant_info.png)
 
 ### Piping Calculation
-![Piping Calculation](./screenshots/piping_calculation.png)
+![Piping Calculation](piping_calculation.png)
 
 ### Pressure Vessel Calculation
-![Pressure Vessel Calculation](./screenshots/pv_calculation.png)
+![Pressure Vessel Calculation](pv_calculation.png)
 
 ## Project Structure
 
 ```bash
 Vessel-Guard-Fitness-For-Service-Level-/
 │
-├── .venv
-├── build
-├── dist
 ├── ASME_B31_3.py             # Main script to run the application
 ├── requirements.txt          # Python dependencies
 ├── README.md                 # Project documentation
-├── screenshots/              # Folder to store screenshots for documentation
-└── ASME_B31_3.SPEC
+└── screenshots/              # Folder to store screenshots for documentation
