@@ -80,13 +80,13 @@ Vessel Guard is a Tkinter-based GUI application designed to assist engineers in 
 ## Screenshots
 
 ### Plant Information Form
-![Plant Information](plant_info.png)
+![Plant Information](.screenshots/plant_info.png)
 
 ### Piping Calculation
-![Piping Calculation](piping_calculation.png)
+![Piping Calculation](.screenshots/piping_calculation.png)
 
 ### Pressure Vessel Calculation
-![Pressure Vessel Calculation](pv_calculation.png)
+![Pressure Vessel Calculation](.screenshots/pv_calculation.png)
 
 ## Project Structure
 
