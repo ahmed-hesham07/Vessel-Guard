@@ -7,8 +7,10 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 from datetime import datetime
 import pytz
+import subprocess
 
 # Configuration Constants
 DATABASE_URL = "sqlite:///vessel_guard.db"
@@ -50,13 +52,9 @@ class Application(tk.Tk):
         self.title("Vessel Guard")
         self.geometry("800x680")
         self.configure(bg="#F4F4F4")
-        
-        # Custom theme configuration
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
         self.configure_styles()
-        
-        # Database setup
         self.session = self.init_db()
         self.current_frame = None
         self.create_widgets()
@@ -75,15 +73,16 @@ class Application(tk.Tk):
         self.style.configure(".", font=("Segoe UI", 12))
         self.style.configure("TFrame", background=colors["frame"])
         self.style.configure("TLabel", background=colors["frame"], foreground=colors["text"])
-        self.style.configure("TEntry", fieldbackground=colors["entry_bg"], foreground=colors["entry_fg"], insertcolor=colors["entry_fg"], bordercolor=colors["button"], lightcolor=colors["button"], darkcolor=colors["button"])
-        self.style.configure("TCombobox", fieldbackground=colors["entry_bg"], foreground=colors["entry_fg"], background=colors["entry_bg"])
-        self.style.configure("TButton", background=colors["button"], foreground=colors["button_text"], font=("Segoe UI", 12, "bold"), borderwidth=0)
+        self.style.configure("TEntry", fieldbackground=colors["entry_bg"], foreground=colors["entry_fg"],
+                             insertcolor=colors["entry_fg"], bordercolor=colors["button"],
+                             lightcolor=colors["button"], darkcolor=colors["button"])
+        self.style.configure("TCombobox", fieldbackground=colors["entry_bg"], foreground=colors["entry_fg"],
+                             background=colors["entry_bg"])
+        self.style.configure("TButton", background=colors["button"], foreground=colors["button_text"],
+                             font=("Segoe UI", 12, "bold"), borderwidth=0)
         self.style.map("TButton", background=[("active", colors["highlight"])])
         self.style.configure("Header.TLabel", font=("Segoe UI", 18, "bold"), foreground=colors["button"])
         self.style.configure("Secondary.TFrame", background=colors["background"])
-        self.option_add("*TButton*Padding", (20, 8))
-        self.option_add("*TEntry*Padding", (8, 4))
-        self.option_add("*TCombobox*Padding", (8, 4))
 
     def init_db(self):
         try:
@@ -145,7 +144,7 @@ class PlantInfoFrame(ttk.Frame):
             entry = ttk.Entry(input_frame)
             entry.grid(row=row, column=1, padx=10, pady=8, sticky="ew")
             self.entries[name] = entry
-        
+
         ttk.Label(input_frame, text="Equipment Type").grid(row=4, column=0, sticky="w", padx=10, pady=8)
         self.equipment_type = ttk.Combobox(input_frame, values=["Piping", "Pressure Vessel"], state="readonly")
         self.equipment_type.grid(row=4, column=1, padx=10, pady=8, sticky="ew")
@@ -157,6 +156,7 @@ class PlantInfoFrame(ttk.Frame):
         button_frame = ttk.Frame(self, style="TFrame")
         button_frame.grid(row=2, column=0, pady=20)
         ttk.Button(button_frame, text="Next →", command=self.next_screen).pack(side="right", padx=10)
+        
         self.columnconfigure(0, weight=1)
         input_frame.columnconfigure(1, weight=1)
 
@@ -188,9 +188,9 @@ class CalculationFrame(ttk.Frame):
             ("Outside Diameter" if self.equip_type == "Piping" else "Inside Radius", "diameter_radius"),
             ("Allowable Stress (psi)", "allowable_stress"),
             ("Joint Efficiency", "joint_efficiency"),
-            ("Corrosion Allowance", "corrosion_allowance"),
-            ("Initial Thickness", "initial_thickness"),
-            ("Actual Thickness", "actual_thickness"),
+            ("Corrosion Allowance (inches)", "corrosion_allowance"),
+            ("Initial Thickness (inches)", "initial_thickness"),
+            ("Actual Thickness (inches)", "actual_thickness"),
             ("Time (years)", "time_years"),
         ]
         for row, (label, field) in enumerate(fields):
@@ -204,7 +204,6 @@ class CalculationFrame(ttk.Frame):
         ttk.Label(bottom_frame, text="Corrosion Type:").grid(row=0, column=0, sticky="w", padx=10)
         self.corr_type = ttk.Combobox(bottom_frame, values=CORROSION_TYPES, state="readonly")
         self.corr_type.grid(row=0, column=1, padx=10, sticky="ew")
-        
         ttk.Label(bottom_frame, text="Inspection Interval:").grid(row=1, column=0, sticky="w", padx=10)
         self.inspection = ttk.Combobox(bottom_frame, values=INSPECTION_INTERVALS, state="readonly")
         self.inspection.grid(row=1, column=1, padx=10, sticky="ew")
@@ -213,18 +212,21 @@ class CalculationFrame(ttk.Frame):
         button_frame.grid(row=3, column=0, sticky="ew")
         ttk.Button(button_frame, text="← Back", command=lambda: self.controller.show_frame("plant_info")).pack(side="left", padx=10)
         ttk.Button(button_frame, text="Calculate →", command=self.calculate).pack(side="right", padx=10)
+        
         self.columnconfigure(0, weight=1)
         input_frame.columnconfigure(1, weight=1)
         bottom_frame.columnconfigure(1, weight=1)
 
     def calculate(self):
         try:
-            data = {field: float(entry.get()) for field, entry in self.input_fields}
-            data.update({
+            plant_data = self.controller.frames["plant_info"].get_plant_data()
+            calculation_data = {field: float(entry.get()) for field, entry in self.input_fields}
+            calculation_data.update({
                 'corrosion_type': self.corr_type.get(),
                 'inspection_interval': int(self.inspection.get())
             })
-            
+            data = {**plant_data, **calculation_data}
+
             if self.equip_type == "Piping":
                 design_thickness = (data['design_pressure'] * data['diameter_radius']) / (2 * (data['allowable_stress'] * data['joint_efficiency']))
             else:
@@ -232,20 +234,16 @@ class CalculationFrame(ttk.Frame):
             
             nominal_thickness = design_thickness + data['corrosion_allowance']
             corrosion_rate = (data['initial_thickness'] - data['actual_thickness']) / data['time_years']
-            remaining_life = max(0, (data['actual_thickness'] - design_thickness) / corrosion_rate)
-            next_inspection = min(remaining_life / 2, data['inspection_interval'])
-            
+            remaining_life = max(0, (data['actual_thickness'] - design_thickness) / corrosion_rate) if corrosion_rate != 0 else 0
+            next_inspection = min(remaining_life / 2, data['inspection_interval']) if remaining_life > 0 else data['inspection_interval']
+
             history = EquipmentHistory(
-                **self.controller.frames["plant_info"].get_plant_data(),
-                timestamp=datetime.now(TIMEZONE),
                 **data,
-                pressure_design_thickness=design_thickness,
-                nominal_thickness=nominal_thickness,
+                timestamp=datetime.now(TIMEZONE),
                 corrosion_rate=corrosion_rate,
                 remaining_life=remaining_life,
                 next_inspection=next_inspection
             )
-            
             self.controller.session.add(history)
             self.controller.session.commit()
             self.generate_pdf(data, design_thickness, nominal_thickness, corrosion_rate, remaining_life, next_inspection)
@@ -256,29 +254,192 @@ class CalculationFrame(ttk.Frame):
             self.controller.session.rollback()
             messagebox.showerror("Database Error", f"Failed to save data: {str(e)}")
 
+    def generate_overview_with_deepseek(self, prompt):
+        try:
+            # Fixed encoding and error handling
+            result = subprocess.run(
+                ["ollama", "run", "deepseek-r1:1.5b", prompt],
+                capture_output=True,
+                text=True,
+                encoding='utf-8',  # Added encoding specification
+                errors='ignore',   # Handle invalid characters
+                timeout=60
+            )
+            if result.returncode == 0:
+                return self._clean_model_output(result.stdout)
+            return "Failed to generate overview"
+        except Exception as e:
+            return f"Error: {str(e)}"
+
     def generate_pdf(self, data, design_thickness, nominal_thickness, corrosion_rate, remaining_life, next_inspection):
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        plant_data = self.controller.frames["plant_info"].get_plant_data()
-        pdf.cell(0, 10, f"Plant ID: {plant_data['plant_id']}", ln=1)
-        pdf.cell(0, 10, f"Equipment: {plant_data['equipment_name']} ({plant_data['equipment_num']})", ln=1)
-        pdf.cell(0, 10, "Calculation Results:", ln=1)
-        pdf.cell(0, 10, f"Design Thickness: {design_thickness:.2f} inches", ln=1)
-        pdf.cell(0, 10, f"Nominal Thickness: {nominal_thickness:.2f} inches", ln=1)
-        pdf.cell(0, 10, f"Corrosion Rate: {corrosion_rate:.4f} inches/year", ln=1)
-        pdf.cell(0, 10, f"Remaining Life: {remaining_life:.1f} years", ln=1)
-        pdf.cell(0, 10, f"Next Inspection: {next_inspection:.1f} years", ln=1)
-        
+        pdf.set_margins(25, 20, 25)
+        pdf.set_auto_page_break(True, margin=25)
+
+        # Removed deprecated font additions
+        # Added Unicode handling through encoding parameter
+        pdf.add_font("DejaVuSans", "", "fonts/DejaVuSans.ttf")
+        pdf.add_font("DejaVuSans", "B", "fonts/DejaVuSans-Bold.ttf")
+        pdf.set_font("DejaVuSans", "", 12)
+
+        primary_color = (0, 82, 136)
+        secondary_color = (64, 64, 64)
+        accent_color = (191, 32, 38)
+
+        # Title Page
+        pdf.set_font("DejaVuSans", "B", 24)
+        pdf.set_text_color(*primary_color)
+        pdf.cell(0, 40, "AI-POWERED FITNESS-FOR-SERVICE REPORT", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+        pdf.ln(30)
+        pdf.set_font("DejaVuSans", "B", 16)
+        pdf.cell(0, 12, data['equipment_name'], new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+        pdf.set_font("DejaVuSans", "", 14)
+        pdf.multi_cell(0, 8, 
+            f"Prepared for: {data['plant_id']}\n"
+            f"Assessment Date: {data['date'].strftime('%d %B %Y')}\n"
+            f"Report Date: {datetime.now(TIMEZONE).strftime('%d %B %Y')}\n"
+            f"Author: {data['author']}\n"
+            f"AI Model: DeepSeek-R1.5B Technical Analysis Engine",
+            align="C"
+        )
+
+        # Table of Contents
+        pdf.add_page()
+        self._create_section_header(pdf, "Table of Contents", primary_color)
+        toc = [
+            ("1. Executive Summary", 3),
+            ("2. Technical Analysis", 4),
+            ("3. Degradation Assessment", 5),
+            ("4. Remaining Life Evaluation", 6),
+            ("5. Maintenance Strategy", 7),
+            ("6. Risk Mitigation Plan", 8),
+            ("Appendix: Calculation Basis", 9)
+        ]
+        pdf.set_font("DejaVuSans", "", 12)
+        for item, page in toc:
+            pdf.cell(0, 10, f"{item} ................................................... {page}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+        # AI-Generated Content
+        analysis_prompt = (
+            f"Perform ASME FFS-1 compliant analysis for {data['equipment_name']} ({data['equipment_num']}).\n"
+            f"Parameters:\n"
+            f"- Design Thickness: {design_thickness:.2f}\"\n"
+            f"- Nominal Thickness: {nominal_thickness:.2f}\"\n"
+            f"- Corrosion Rate: {corrosion_rate:.4f}\"/year\n"
+            f"- Service Duration: {data['time_years']} years\n"
+            f"- Remaining Life: {remaining_life:.1f} years\n"
+            f"Include:\n"
+            f"1. Degradation mechanism identification\n"
+            f"2. API 579 compliance status\n"
+            f"3. Safety margin calculation\n"
+            f"4. Risk matrix classification\n"
+            f"5. Inspection interval justification\n"
+            f"Format: Technical report sections with engineering notation\n"
+            f"Style: Formal technical documentation\n"
+            f"Exclude: Markdown formatting, bullet points, and special symbols"
+        )
+        technical_analysis = self.generate_overview_with_deepseek(analysis_prompt)
+
+        # Section 1: Executive Summary
+        pdf.add_page()
+        self._create_section_header(pdf, "1. Executive Summary", primary_color)
+        summary = technical_analysis.split("2. Technical Analysis")[0] if "2. Technical Analysis" in technical_analysis else technical_analysis
+        self._format_text(pdf, summary, secondary_color)
+
+        # Section 2: Technical Analysis
+        pdf.add_page()
+        self._create_section_header(pdf, "2. Technical Analysis", primary_color)
+        technical_section = technical_analysis.split("2. Technical Analysis")[1].split("3. ")[0] if "2. Technical Analysis" in technical_analysis else "Analysis unavailable"
+        self._format_text(pdf, technical_section, secondary_color)
+
+        # Degradation Assessment Table
+        pdf.add_page()
+        self._create_section_header(pdf, "3. Degradation Assessment", primary_color)
+        degradation_data = [
+            ["Parameter", "Value", "Standard", "Limit"],
+            ["Current Thickness", f"{data['actual_thickness']:.3f}\"", "ASME B31.3", f"{design_thickness:.3f}\""],
+            ["Corrosion Rate", f"{corrosion_rate:.4f}\"/yr", "API 570", "0.025\"/yr"],
+            ["Material Loss", f"{(data['initial_thickness'] - data['actual_thickness']):.3f}\"", "NACE MR0175", "0.125\""],
+            ["Remaining Life", f"{remaining_life:.1f} years", "ASME FFS-1", "10 years"]
+        ]
+        self._create_table(pdf, degradation_data, primary_color)
+
+        # Maintenance Plan
+        pdf.add_page()
+        self._create_section_header(pdf, "5. Maintenance Strategy", primary_color)
+        maintenance_prompt = (
+            f"Generate maintenance plan for {data['equipment_name']} with:\n"
+            f"Remaining life: {remaining_life} years\n"
+            f"Next inspection: {next_inspection} years\n"
+            f"Include: Inspection types, frequencies, and mitigation measures\n"
+            f"Format: Numbered list with technical specifications\n"
+            f"Exclude: Markdown and non-technical language"
+        )
+        maintenance_content = self.generate_overview_with_deepseek(maintenance_prompt)
+        self._format_text(pdf, maintenance_content, secondary_color)
+
+        # Footer
+        def footer(self):
+            self.set_y(-20)
+            self.set_font("DejaVuSans", "I", 8)
+            self.set_text_color(*secondary_color)
+            self.cell(0, 8, f"DeepSeek-R1.5B Technical Report | {data['equipment_num']} | Page {self.page_no()}", align="C")
+        pdf.footer = footer.__get__(pdf, FPDF)
+
+        # Save PDF
         filename = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF files", "*.pdf")],
-            initialfile=f"{self.equip_type.lower()}_report.pdf"
+            initialfile=f"FFS_Report_{data['equipment_num']}_{datetime.now().strftime('%Y%m%d')}.pdf"
         )
         if filename:
-            pdf.output(filename)
-            messagebox.showinfo("PDF Saved", f"Report saved to:\n{filename}")
+            try:
+                pdf.output(filename)
+                messagebox.showinfo("Report Generated", f"Professional report saved to:\n{filename}")
+            except Exception as e:
+                messagebox.showerror("PDF Error", f"Failed to save report: {str(e)}")
 
-if __name__ == "__main__":
-    app = Application()
-    app.mainloop()
+    def _create_section_header(self, pdf, title, color):
+        pdf.set_font("DejaVuSans", "B", 16)
+        pdf.set_text_color(*color)
+        pdf.cell(0, 12, title, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_draw_color(*color)
+        pdf.line(25, pdf.y, 185, pdf.y)
+        pdf.ln(8)
+
+    def _format_text(self, pdf, text, color):
+        pdf.set_text_color(*color)
+        pdf.set_font("DejaVuSans", "", 11)
+        for line in text.split('\n'):
+            clean_line = line.replace("**", "").replace("#", "").strip()
+            pdf.multi_cell(0, 6, clean_line)
+            pdf.ln(4)
+
+    def _create_table(self, pdf, data, color):
+        pdf.set_font("DejaVuSans", "B", 10)
+        pdf.set_text_color(*color)
+        col_width = (pdf.w - 50) / len(data[0])
+        
+        # Header
+        for header in data[0]:
+            pdf.cell(col_width, 8, header, border=1, align='C')
+        pdf.ln()
+        
+        # Rows
+        pdf.set_font("DejaVuSans", "", 10)
+        for row in data[1:]:
+            for item in row:
+                pdf.cell(col_width, 8, item, border=1)
+            pdf.ln()
+        pdf.ln(10)
+
+    def _clean_model_output(self, text):
+        replacements = {
+            "**": "", "```": "", "#": "", "`": "",
+            "•": " -", "": " -", "­­": "-",
+            "##": "", "###": "", "####": ""
+        }
+        for key, value in replacements.items():
+            text = text.replace(key, value)
+        return text.strip()
