@@ -1,51 +1,29 @@
-CREATE TABLE IF NOT EXISTS history_piping (
-                                          id SERIAL PRIMARY KEY,
-                                          name VARCHAR(255) NOT NULL,
-                                          plant_id VARCHAR(50) ,
-                                          equipment_num VARCHAR(50) NOT NULL,
-                                          equipment_name VARCHAR(100) NOT NULL,
-                                          equipment_type VARCHAR(50) NOT NULL CHECK (equipment_type IN ('Piping')),
-                                          date DATE NOT NULL,
-                                          P FLOAT NOT NULL,
-                                          D FLOAT NOT NULL,
-                                          S FLOAT NOT NULL,
-                                          E FLOAT NOT NULL,
-                                          c FLOAT NOT NULL,
-                                          t FLOAT NOT NULL,
-                                          tm FLOAT NOT NULL,
-                                          t_int FLOAT NOT NULL,
-                                          t_act FLOAT NOT NULL,
-                                          time_years INTEGER NOT NULL,
-                                          corrosion_rate FLOAT NOT NULL,
-                                          corrosion_type VARCHAR(20),
-                                          remaining_life FLOAT NOT NULL,
-                                          next_inspection_year INTEGER NOT NULL,
-                                          inspection_interval INTEGER NOT NULL,
-                                          timestamp TIMESTAMP NOT NULL
-);
+-- console.sql
 
-CREATE TABLE IF NOT EXISTS history_PV (
-                                          id SERIAL PRIMARY KEY,
-                                          name VARCHAR(255) NOT NULL,
-                                          plant_id VARCHAR(50) ,
-                                          equipment_num VARCHAR(50) NOT NULL,
-                                          equipment_name VARCHAR(100) NOT NULL,
-                                          equipment_type VARCHAR(50) NOT NULL CHECK (equipment_type IN ('Pressure Vessel')),
-                                          date DATE NOT NULL,
-                                          P FLOAT NOT NULL,
-                                          R FLOAT NOT NULL,
-                                          S FLOAT NOT NULL,
-                                          E FLOAT NOT NULL,
-                                          c FLOAT NOT NULL,
-                                          t FLOAT NOT NULL,
-                                          tm FLOAT NOT NULL,
-                                          t_int FLOAT NOT NULL,
-                                          t_act FLOAT NOT NULL,
-                                          time_years INTEGER NOT NULL,
-                                          corrosion_rate FLOAT NOT NULL,
-                                          corrosion_type VARCHAR(20),
-                                          remaining_life FLOAT NOT NULL,
-                                          next_inspection_year INTEGER NOT NULL,
-                                          inspection_interval INTEGER NOT NULL,
-                                          timestamp TIMESTAMP NOT NULL
+-- Drop the table if it already exists
+DROP TABLE IF EXISTS equipment_history;
+
+-- Create the equipment_history table
+CREATE TABLE equipment_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plant_id TEXT NOT NULL,
+    equipment_num TEXT NOT NULL,
+    equipment_name TEXT NOT NULL,
+    equipment_type TEXT NOT NULL,
+    date DATETIME NOT NULL,
+    author TEXT NOT NULL,
+    design_pressure REAL NOT NULL,
+    diameter_radius REAL,
+    allowable_stress REAL NOT NULL,
+    joint_efficiency REAL NOT NULL,
+    corrosion_allowance REAL NOT NULL,
+    initial_thickness REAL NOT NULL,
+    actual_thickness REAL NOT NULL,
+    time_years INTEGER NOT NULL,
+    corrosion_rate REAL NOT NULL,
+    corrosion_type TEXT NOT NULL,
+    remaining_life REAL NOT NULL,
+    next_inspection INTEGER NOT NULL,
+    inspection_interval INTEGER NOT NULL,
+    timestamp DATETIME NOT NULL
 );
