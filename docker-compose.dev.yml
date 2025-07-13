@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: vessel-guard-postgres-dev
+    environment:
+      POSTGRES_DB: vessel_guard_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - vessel-guard-dev
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: vessel-guard-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - vessel-guard-dev
+
+  # Backend API (Development with hot reload)
+  backend-dev:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: vessel-guard-backend-dev
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/vessel_guard_dev
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - SECRET_KEY=dev-secret-key-for-development-only
+      - CORS_ORIGINS=["http://localhost:3000"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./apps/backend:/app
+      - backend_deps:/app/__pycache__
+    networks:
+      - vessel-guard-dev
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+
+  # Frontend (Development with hot reload)
+  frontend-dev:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile.dev
+    container_name: vessel-guard-frontend-dev
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - NEXT_PUBLIC_ENVIRONMENT=development
+      - NEXT_PUBLIC_DEV_MODE=true
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-dev
+    volumes:
+      - ./apps/frontend:/app
+      - frontend_deps:/app/node_modules
+      - frontend_next:/app/.next
+    networks:
+      - vessel-guard-dev
+    command: npm run dev
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  backend_deps:
+  frontend_deps:
+  frontend_next:
+
+networks:
+  vessel-guard-dev:
+    driver: bridge
