@@ -1,0 +1,28 @@
+{
+  "name": "@vessel-guard/backend",
+  "version": "1.0.0",
+  "description": "FastAPI backend for Vessel Guard platform",
+  "private": true,
+  "scripts": {
+    "dev": "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "start": "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+    "build": "pip install -r requirements.txt",
+    "test": "pytest tests/ -v --cov=app",
+    "lint": "flake8 app/ && mypy app/",
+    "format": "black app/ && isort app/",
+    "type-check": "mypy app/",
+    "clean": "find . -type d -name '__pycache__' -exec rm -rf {} + && find . -name '*.pyc' -delete",
+    "db:migrate": "alembic upgrade head",
+    "db:downgrade": "alembic downgrade -1",
+    "db:seed": "python -c \"import asyncio; from app.db.init_db import seed_initial_data; asyncio.run(seed_initial_data())\"",
+    "generate-migration": "alembic revision --autogenerate -m"
+  },
+  "engines": {
+    "python": ">=3.11"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmed-hesham07/Vessel-Guard.git",
+    "directory": "apps/backend"
+  }
+}
