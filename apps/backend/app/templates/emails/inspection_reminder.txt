@@ -1,0 +1,27 @@
+🛡️ VESSEL GUARD - INSPECTION REMINDER
+
+⚠️ INSPECTION REQUIRED
+An inspection is scheduled for vessel: {{ vessel_name }}
+
+INSPECTION DETAILS:
+- Vessel: {{ vessel_name }}
+- Inspection Type: {{ inspection_type }}
+- Due Date: {{ due_date.strftime('%B %d, %Y') if due_date else 'Not specified' }}
+- Inspector: {{ inspector or 'Not assigned' }}
+- Location: {{ location or 'Not specified' }}
+
+{% if notes %}
+📝 NOTES:
+{{ notes }}
+{% endif %}
+
+Please ensure all necessary preparations are made for this inspection. 
+Review the vessel documentation and ensure all safety protocols are in place.
+
+View in Dashboard: {{ dashboard_url }}
+
+IMPORTANT: Timely inspections are crucial for maintaining vessel safety and regulatory compliance.
+
+---
+This is an automated message from Vessel Guard.
+For support, contact us at support@vessel-guard.com

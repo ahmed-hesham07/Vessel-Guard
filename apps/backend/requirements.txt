@@ -46,6 +46,13 @@ CoolProp==6.6.0          # Thermodynamic properties
 fluids==1.0.25           # Fluid mechanics calculations
 thermo==0.3.0            # Chemical engineering thermodynamics
 
+# Email and template dependencies
+jinja2==3.1.2
+python-magic==0.4.27
+
+# File handling and image processing
+pillow==10.1.0
+
 # Documentation
 sphinx==7.2.6
 sphinx-rtd-theme==1.3.0

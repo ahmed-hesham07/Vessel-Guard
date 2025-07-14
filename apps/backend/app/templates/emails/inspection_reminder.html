@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f8fafc;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .footer {
+            background-color: #64748b;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+        }
+        .alert {
+            background-color: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .info {
+            background-color: #eff6ff;
+            border: 1px solid #93c5fd;
+            color: #1d4ed8;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ Vessel Guard</h1>
+        <h2>Inspection Reminder</h2>
+    </div>
+    
+    <div class="content">
+        <div class="alert">
+            <strong>⚠️ Inspection Required</strong><br>
+            An inspection is scheduled for vessel: <strong>{{ vessel_name }}</strong>
+        </div>
+        
+        <h3>Inspection Details:</h3>
+        <ul>
+            <li><strong>Vessel:</strong> {{ vessel_name }}</li>
+            <li><strong>Inspection Type:</strong> {{ inspection_type }}</li>
+            <li><strong>Due Date:</strong> {{ due_date.strftime('%B %d, %Y') if due_date else 'Not specified' }}</li>
+            <li><strong>Inspector:</strong> {{ inspector or 'Not assigned' }}</li>
+            <li><strong>Location:</strong> {{ location or 'Not specified' }}</li>
+        </ul>
+        
+        {% if notes %}
+        <div class="info">
+            <strong>📝 Notes:</strong><br>
+            {{ notes }}
+        </div>
+        {% endif %}
+        
+        <p>
+            Please ensure all necessary preparations are made for this inspection. 
+            Review the vessel documentation and ensure all safety protocols are in place.
+        </p>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="{{ dashboard_url }}" class="button">View in Dashboard</a>
+        </div>
+        
+        <p><strong>Important:</strong> Timely inspections are crucial for maintaining vessel safety and regulatory compliance.</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from Vessel Guard.<br>
+        For support, contact us at support@vessel-guard.com</p>
+    </div>
+</body>
+</html>
