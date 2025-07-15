@@ -5,7 +5,7 @@ Centralized import for all CRUD operations.
 """
 
 from .base import CRUDBase
-from .user import user, CRUDUser
+from .user import user_crud, CRUDUser
 from .organization import organization, CRUDOrganization
 from .project import project, CRUDProject
 from .vessel import vessel, CRUDVessel
@@ -16,7 +16,7 @@ from .report import report, CRUDReport
 
 __all__ = [
     "CRUDBase",
-    "user",
+    "user_crud",
     "CRUDUser", 
     "organization",
     "CRUDOrganization",
