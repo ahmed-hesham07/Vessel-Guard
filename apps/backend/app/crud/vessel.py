@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.crud.base import CRUDBase
 from app.db.models.vessel import Vessel
+from app.db.models.project import Project
 from app.schemas.vessel import VesselCreate, VesselUpdate
 
 
@@ -51,7 +52,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         self, db: Session, *, organization_id: int, skip: int = 0, limit: int = 100
     ) -> List[Vessel]:
         """
-        Get vessels by organization.
+        Get vessels by organization through project relationship.
         
         Args:
             db: Database session
@@ -64,7 +65,8 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         """
         return (
             db.query(Vessel)
-            .filter(Vessel.organization_id == organization_id)
+            .join(Project)
+            .filter(Project.organization_id == organization_id)
             .offset(skip)
             .limit(limit)
             .all()
@@ -86,10 +88,11 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         """
         return (
             db.query(Vessel)
+            .join(Project)
             .filter(
                 and_(
                     Vessel.tag_number == tag_number,
-                    Vessel.organization_id == organization_id
+                    Project.organization_id == organization_id
                 )
             )
             .first()
@@ -120,7 +123,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         query = db.query(Vessel).filter(Vessel.vessel_type == vessel_type)
         
         if organization_id:
-            query = query.filter(Vessel.organization_id == organization_id)
+            query = query.join(Project).filter(Project.organization_id == organization_id)
         
         return query.offset(skip).limit(limit).all()
 
@@ -149,7 +152,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         query = db.query(Vessel).filter(Vessel.design_code == design_code)
         
         if organization_id:
-            query = query.filter(Vessel.organization_id == organization_id)
+            query = query.join(Project).filter(Project.organization_id == organization_id)
         
         return query.offset(skip).limit(limit).all()
 
@@ -184,7 +187,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         )
         
         if organization_id:
-            query = query.filter(Vessel.organization_id == organization_id)
+            query = query.join(Project).filter(Project.organization_id == organization_id)
         
         return query.all()
 
@@ -210,7 +213,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         )
         
         if organization_id:
-            query = query.filter(Vessel.organization_id == organization_id)
+            query = query.join(Project).filter(Project.organization_id == organization_id)
         
         return query.all()
 
@@ -247,7 +250,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         )
         
         if organization_id:
-            db_query = db_query.filter(Vessel.organization_id == organization_id)
+            db_query = db_query.join(Project).filter(Project.organization_id == organization_id)
         
         return db_query.offset(skip).limit(limit).all()
 
@@ -284,7 +287,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
             query = query.filter(Vessel.operating_pressure <= max_pressure)
         
         if organization_id:
-            query = query.filter(Vessel.organization_id == organization_id)
+            query = query.join(Project).filter(Project.organization_id == organization_id)
         
         return query.offset(skip).limit(limit).all()
 
@@ -321,7 +324,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
             query = query.filter(Vessel.operating_temperature <= max_temperature)
         
         if organization_id:
-            query = query.filter(Vessel.organization_id == organization_id)
+            query = query.join(Project).filter(Project.organization_id == organization_id)
         
         return query.offset(skip).limit(limit).all()
 
@@ -383,7 +386,8 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         """
         return (
             db.query(func.count(Vessel.id))
-            .filter(Vessel.organization_id == organization_id)
+            .join(Project, Vessel.project_id == Project.id)
+            .filter(Project.organization_id == organization_id)
             .scalar()
         )
 
@@ -412,7 +416,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         query = db.query(Vessel).filter(Vessel.material_id == material_id)
         
         if organization_id:
-            query = query.filter(Vessel.organization_id == organization_id)
+            query = query.join(Project).filter(Project.organization_id == organization_id)
         
         return query.offset(skip).limit(limit).all()
 
@@ -456,7 +460,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
         ).filter(Vessel.is_active == True)
         
         if organization_id:
-            query = query.filter(Vessel.organization_id == organization_id)
+            query = query.join(Project).filter(Project.organization_id == organization_id)
         
         return query.all()
 
@@ -484,7 +488,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
                 db.query(func.count(Vessel.id))
                 .filter(
                     and_(
-                        Vessel.organization_id == organization_id,
+                        Project.organization_id == organization_id,
                         Vessel.vessel_type == vessel_type
                     )
                 )
@@ -499,7 +503,7 @@ class CRUDVessel(CRUDBase[Vessel, VesselCreate, VesselUpdate]):
                 db.query(func.count(Vessel.id))
                 .filter(
                     and_(
-                        Vessel.organization_id == organization_id,
+                        Project.organization_id == organization_id,
                         Vessel.design_code == code
                     )
                 )

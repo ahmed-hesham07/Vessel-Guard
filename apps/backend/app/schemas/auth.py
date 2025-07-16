@@ -43,6 +43,11 @@ class UserRegister(BaseModel):
         if not any(c.isdigit() for c in v):
             raise ValueError('Password must contain at least one digit')
         
+        # Check for special characters
+        special_chars = "!@#$%^&*()_+-=[]{}|;:\,./<>?"
+        if not any(c in special_chars for c in v):
+            raise ValueError('Password must contain at least one special character')
+        
         return v
 
 

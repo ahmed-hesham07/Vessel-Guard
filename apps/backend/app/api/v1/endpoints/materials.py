@@ -25,6 +25,7 @@ from app.schemas import (
     MaterialList,
     MaterialSummary,
     MaterialProperty,
+    MaterialPropertyRange,
     MaterialStatistics,
     MaterialDashboard
 )

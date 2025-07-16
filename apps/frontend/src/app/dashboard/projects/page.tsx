@@ -25,8 +25,8 @@ interface Project {
   id: number
   name: string
   description: string
-  status: 'active' | 'completed' | 'on_hold' | 'cancelled' | 'archived'
-  priority: 'low' | 'medium' | 'high' | 'critical'
+  status: string
+  priority: string
   start_date: string
   end_date?: string
   created_at: string
@@ -45,7 +45,7 @@ interface Project {
   calculations_count: number
 }
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   active: 'bg-green-100 text-green-800',
   completed: 'bg-blue-100 text-blue-800',
   on_hold: 'bg-yellow-100 text-yellow-800',
@@ -53,7 +53,7 @@ const statusColors = {
   archived: 'bg-gray-100 text-gray-800'
 }
 
-const priorityColors = {
+const priorityColors: Record<string, string> = {
   low: 'bg-gray-100 text-gray-800',
   medium: 'bg-blue-100 text-blue-800',
   high: 'bg-orange-100 text-orange-800',
@@ -74,9 +74,10 @@ export default function ProjectsPage() {
 
       try {
         const data = await apiService.getProjects(token)
-        setProjects(data as Project[])
+        setProjects(data)
       } catch (error) {
         console.error('Error fetching projects:', error)
+        setProjects([])
       } finally {
         setIsLoading(false)
       }
@@ -191,10 +192,10 @@ export default function ProjectsPage() {
                     {project.name}
                   </CardTitle>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge className={statusColors[project.status]}>
+                    <Badge className={statusColors[project.status] || 'bg-gray-100 text-gray-800'}>
                       {project.status.replace('_', ' ')}
                     </Badge>
-                    <Badge className={priorityColors[project.priority]}>
+                    <Badge className={priorityColors[project.priority] || 'bg-gray-100 text-gray-800'}>
                       {project.priority}
                     </Badge>
                   </div>

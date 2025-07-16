@@ -14,28 +14,12 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
+from app.db.connection import db_manager
 
 logger = logging.getLogger(__name__)
 
-# SQLAlchemy engine configuration
-if settings.TESTING:
-    # Use SQLite for testing
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-else:
-    # Use PostgreSQL for production/development
-    engine = create_engine(
-        str(settings.DATABASE_URL),
-        pool_pre_ping=True,
-        pool_recycle=300,
-        pool_size=10,
-        max_overflow=20,
-        echo=settings.DEBUG,
-    )
+# Use the connection manager's engine
+engine = db_manager.get_engine()
 
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -94,10 +78,4 @@ def test_db_connection() -> bool:
     Returns:
         True if connection successful, False otherwise
     """
-    try:
-        with engine.connect() as connection:
-            connection.execute("SELECT 1")
-        return True
-    except Exception as e:
-        logger.error(f"Database connection test failed: {e}")
-        return False
+    return db_manager.test_connection()

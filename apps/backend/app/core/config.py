@@ -51,10 +51,18 @@ class Settings(BaseSettings):
     POSTGRES_PORT: str = "5432"
     DATABASE_URL: Optional[str] = None
     
+    # Fly.io specific database configuration
+    FLY_DATABASE_URL: Optional[str] = None
+    
     @validator("DATABASE_URL", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
+        
+        # Check for Fly.io DATABASE_URL first (provided by postgres attach)
+        if values.get("FLY_DATABASE_URL"):
+            return values.get("FLY_DATABASE_URL")
+        
         # For PostgreSQL connections, build the URL
         if values.get("POSTGRES_SERVER") and values.get("POSTGRES_DB"):
             return PostgresDsn.build(

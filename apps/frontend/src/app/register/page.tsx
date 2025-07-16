@@ -1,16 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Shield, Eye, EyeOff, Loader2, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+
+// Password requirements component
+const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
+  <div className={`flex items-center space-x-2 text-sm ${met ? 'text-green-600' : 'text-gray-500'}`}>
+    {met ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+    <span>{text}</span>
+  </div>
+)
+
+// Password validation helper
+const validatePassword = (password: string) => {
+  const requirements = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    digit: /\d/.test(password),
+    special: /[!@#$%^&*()_+\-=\[\]{}|;':",./<>?]/.test(password),
+  }
+  
+  const isValid = Object.values(requirements).every(req => req)
+  
+  return { requirements, isValid }
+}
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -51,8 +73,9 @@ export default function RegisterPage() {
       return false
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long')
+    const { isValid: isPasswordValid } = validatePassword(formData.password)
+    if (!isPasswordValid) {
+      setError('Password does not meet the requirements')
       return false
     }
 
@@ -90,6 +113,10 @@ export default function RegisterPage() {
     }
   }
 
+  const passwordValidation = validatePassword(formData.password)
+  const isPasswordValid = passwordValidation.isValid
+  const passwordRequirements = passwordValidation.requirements
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -109,7 +136,7 @@ export default function RegisterPage() {
           <CardHeader>
             <CardTitle>Sign Up</CardTitle>
             <CardDescription>
-              Create your account to get started
+              Create your account to get started. Your password must be at least 8 characters and include uppercase, lowercase, numeric, and special characters.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -217,7 +244,7 @@ export default function RegisterPage() {
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     required
-                    placeholder="Minimum 8 characters"
+                    placeholder="Enter your password"
                     className="pr-10"
                   />
                   <button
@@ -232,6 +259,35 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
+                
+                {/* Password Requirements */}
+                {formData.password && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+                    <div className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</div>
+                    <div className="space-y-1">
+                      <PasswordRequirement 
+                        met={validatePassword(formData.password).requirements.length}
+                        text="At least 8 characters"
+                      />
+                      <PasswordRequirement 
+                        met={validatePassword(formData.password).requirements.uppercase}
+                        text="At least one uppercase letter (A-Z)"
+                      />
+                      <PasswordRequirement 
+                        met={validatePassword(formData.password).requirements.lowercase}
+                        text="At least one lowercase letter (a-z)"
+                      />
+                      <PasswordRequirement 
+                        met={validatePassword(formData.password).requirements.digit}
+                        text="At least one number (0-9)"
+                      />
+                      <PasswordRequirement 
+                        met={validatePassword(formData.password).requirements.special}
+                        text="At least one special character (!@#$%^&*)"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

@@ -6,13 +6,20 @@ following Azure security best practices.
 """
 
 import secrets
+import warnings
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Union
 
-import jwt
-from jwt.exceptions import JWTDecodeError as InvalidTokenError
+from jose import jwt
+from jose.exceptions import JWTError as InvalidTokenError
+
+# Apply bcrypt compatibility fix
+from app.utils.bcrypt_fix import bcrypt
+
+# Suppress bcrypt version warning from passlib
+warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
+
 from passlib.context import CryptContext
-from passlib.hash import bcrypt
 
 from app.core.config import settings
 

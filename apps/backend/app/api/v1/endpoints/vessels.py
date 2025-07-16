@@ -554,7 +554,7 @@ def get_available_vessel_types():
     """
     return [
         "pressure_vessel", "storage_tank", "heat_exchanger", 
-        "reactor", "column", "separator", "filter", "other"
+        "reactor", "column", "separator", "filter", "piping", "air_cooling", "other"
     ]
 
 

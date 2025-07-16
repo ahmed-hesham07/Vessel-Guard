@@ -30,6 +30,7 @@ class VesselType(str, enum.Enum):
     REACTOR = "reactor"
     SEPARATOR = "separator"
     PIPING = "piping"
+    AIR_COOLING = "air_cooling"
     FITTING = "fitting"
     VALVE = "valve"
 

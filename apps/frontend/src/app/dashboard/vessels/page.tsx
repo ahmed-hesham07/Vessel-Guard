@@ -27,7 +27,7 @@ interface Vessel {
   id: number
   name: string
   tag_number: string
-  type: 'pressure_vessel' | 'storage_tank' | 'heat_exchanger' | 'reactor' | 'separator' | 'piping' | 'fitting' | 'valve'
+  type: 'pressure_vessel' | 'storage_tank' | 'heat_exchanger' | 'reactor' | 'separator' | 'piping' | 'air_cooling' | 'fitting' | 'valve'
   geometry: 'cylindrical' | 'spherical' | 'conical' | 'rectangular' | 'custom'
   design_code: string
   status: 'active' | 'inactive' | 'maintenance' | 'decommissioned'
@@ -58,6 +58,7 @@ const vesselTypeLabels = {
   reactor: 'Reactor',
   separator: 'Separator',
   piping: 'Piping',
+  air_cooling: 'Air Cooling',
   fitting: 'Fitting',
   valve: 'Valve'
 }
@@ -192,6 +193,7 @@ export default function VesselsPage() {
             <option value="reactor">Reactor</option>
             <option value="separator">Separator</option>
             <option value="piping">Piping</option>
+            <option value="air_cooling">Air Cooling</option>
             <option value="fitting">Fitting</option>
             <option value="valve">Valve</option>
           </select>

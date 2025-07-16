@@ -16,15 +16,12 @@ from app.api.v1.endpoints import (
     calculations,
     inspections,
     reports,
-    engineering_standards,
-    health,
-    status
+    status,
 )
 
 api_router = APIRouter()
 
 # Include all endpoint routers
-api_router.include_router(health.router, prefix="/health", tags=["health"])
 api_router.include_router(status.router, tags=["status"])
 api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
@@ -35,5 +32,3 @@ api_router.include_router(materials.router, prefix="/materials", tags=["material
 api_router.include_router(calculations.router, prefix="/calculations", tags=["calculations"])
 api_router.include_router(inspections.router, prefix="/inspections", tags=["inspections"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
-api_router.include_router(engineering_standards.router, prefix="/standards", tags=["standards"])
-api_router.include_router(engineering_standards.router, prefix="/standards", tags=["engineering-standards"])

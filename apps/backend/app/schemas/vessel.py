@@ -41,7 +41,7 @@ class VesselBase(BaseModel):
         """Validate vessel type."""
         allowed_types = [
             "pressure_vessel", "storage_tank", "heat_exchanger", 
-            "reactor", "column", "separator", "filter", "other"
+            "reactor", "column", "separator", "filter", "piping", "air_cooling", "other"
         ]
         if v not in allowed_types:
             raise ValueError(f'Vessel type must be one of: {", ".join(allowed_types)}')
@@ -193,7 +193,7 @@ class VesselUpdate(BaseModel):
         if v is not None:
             allowed_types = [
                 "pressure_vessel", "storage_tank", "heat_exchanger", 
-                "reactor", "column", "separator", "filter", "other"
+                "reactor", "column", "separator", "filter", "piping", "air_cooling", "other"
             ]
             if v not in allowed_types:
                 raise ValueError(f'Vessel type must be one of: {", ".join(allowed_types)}')

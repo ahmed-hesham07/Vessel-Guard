@@ -106,8 +106,8 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-      <div className="flex flex-col flex-grow pt-5 bg-white overflow-y-auto border-r border-gray-200">
+    <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:z-10">
+      <div className="flex flex-col flex-grow pt-5 bg-white overflow-y-auto border-r border-gray-200 shadow-sm">
         <div className="flex items-center flex-shrink-0 px-4">
           <Shield className="h-8 w-8 text-blue-600" />
           <span className="ml-2 text-xl font-bold text-gray-900">Vessel Guard</span>

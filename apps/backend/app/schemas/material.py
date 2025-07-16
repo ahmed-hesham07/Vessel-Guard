@@ -264,6 +264,22 @@ class MaterialStatistics(BaseModel):
     weldable_percentage: float
 
 
+class MaterialProperty(BaseModel):
+    """Schema for material property response."""
+    
+    yield_strength: Optional[float] = Field(None, description="Yield strength")
+    tensile_strength: Optional[float] = Field(None, description="Tensile strength")
+    elongation: Optional[float] = Field(None, description="Elongation percentage")
+    elastic_modulus: Optional[float] = Field(None, description="Elastic modulus")
+    poisson_ratio: Optional[float] = Field(None, description="Poisson's ratio")
+    thermal_expansion: Optional[float] = Field(None, description="Thermal expansion coefficient")
+    thermal_conductivity: Optional[float] = Field(None, description="Thermal conductivity")
+    density: Optional[float] = Field(None, description="Density")
+    max_temperature: Optional[float] = Field(None, description="Maximum operating temperature")
+    min_temperature: Optional[float] = Field(None, description="Minimum operating temperature")
+    is_asme_compliant: Optional[bool] = Field(None, description="ASME compliance status")
+
+
 class MaterialPropertyRange(BaseModel):
     """Schema for material property search criteria."""
     
@@ -323,3 +339,12 @@ class StandardMaterial(BaseModel):
     min_temp: Optional[float]
     max_temp: Optional[float]
     typical_applications: List[str]
+
+
+class MaterialDashboard(BaseModel):
+    """Schema for material dashboard response."""
+    
+    recent_materials: List[MaterialSummary] = Field(default_factory=list)
+    most_used_materials: List[MaterialSummary] = Field(default_factory=list)
+    asme_compliant_materials: List[MaterialSummary] = Field(default_factory=list)
+    statistics: MaterialStatistics

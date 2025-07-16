@@ -34,12 +34,11 @@ router = APIRouter()
 
 @router.get("/", response_model=UserList)
 def get_users(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
     search: Optional[str] = Query(None, min_length=1),
     role: Optional[str] = Query(None),
     active_only: bool = Query(True),
     organization_only: bool = Query(True),
+    pagination: dict = Depends(get_pagination_params),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -50,6 +49,10 @@ def get_users(
     Super admins can see all users.
     Regular users cannot access this endpoint.
     """
+    # Extract pagination parameters
+    skip = pagination["skip"]
+    limit = pagination["limit"]
+    
     if current_user.role not in ["organization_admin", "super_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

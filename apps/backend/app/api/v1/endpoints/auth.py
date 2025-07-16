@@ -111,8 +111,60 @@ async def register(
             detail=f"Password validation failed: {', '.join(password_validation['errors'])}"
         )
     
+    # Get default organization (or create if none exists)
+    from app.db.models.organization import Organization
+    default_org = db.query(Organization).first()
+    if not default_org:
+        default_org = Organization(
+            name="Default Organization",
+            description="Default organization for Vessel Guard",
+            subscription_type="trial",
+            is_active=True
+        )
+        db.add(default_org)
+        db.commit()
+        db.refresh(default_org)
+    
+    # Handle organization creation if user provided organization_name
+    if user_data.organization_name:
+        # Check if organization exists
+        org = db.query(Organization).filter(
+            Organization.name == user_data.organization_name
+        ).first()
+        if not org:
+            org = Organization(
+                name=user_data.organization_name,
+                description=f"Organization for {user_data.organization_name}",
+                subscription_type="trial",
+                is_active=True
+            )
+            db.add(org)
+            db.commit()
+            db.refresh(org)
+        organization_id = org.id
+    else:
+        organization_id = default_org.id
+    
+    # Convert UserRegister to UserCreate with proper fields
+    from app.schemas.user import UserCreate
+    from app.db.models.user import UserRole
+    
+    user_create_data = UserCreate(
+        email=user_data.email,
+        password=user_data.password,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        phone=user_data.phone,
+        job_title=user_data.job_title,
+        department=user_data.department,
+        role=UserRole.VIEWER,  # Default role for new users
+        timezone="UTC",  # Default timezone
+        language="en",  # Default language
+        organization_id=organization_id
+    )
+    
     # Create user
-    user = user_crud.create(db, obj_in=user_data)
+    user = user_crud.create(db, obj_in=user_create_data)
     
     return user
 

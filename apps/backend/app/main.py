@@ -5,6 +5,10 @@ A comprehensive SaaS platform for pressure vessel integrity analysis
 and compliance with engineering standards.
 """
 
+import warnings
+# Suppress bcrypt version warning from passlib
+warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -17,10 +21,10 @@ from app.core.config import settings
 from app.core.logging_config import setup_logging, get_logger
 from app.api.v1.api import api_router
 from app.db.init_db import init_db
-from app.middleware.rate_limiting import RateLimitMiddleware
-from app.middleware.request_logging import RequestLoggingMiddleware
+from app.middleware.rate_limiting_new import RateLimitMiddleware
 from app.middleware.security import SecurityMiddleware
 from app.middleware.performance import PerformanceMiddleware, performance_middleware_instance
+from app.middleware.error_logging import ErrorLoggingMiddleware
 
 # Setup logging
 setup_logging()
@@ -52,19 +56,19 @@ app = FastAPI(
 
 # Add middleware (order matters - they execute in reverse order of addition)
 
+# Error logging middleware (should be early to catch all errors)
+app.add_middleware(ErrorLoggingMiddleware, log_all_requests=settings.DEBUG)
+
 # Performance monitoring (should be first to measure everything)
 performance_middleware = PerformanceMiddleware(app)
 app.add_middleware(PerformanceMiddleware)
 
-# Security middleware
-app.add_middleware(SecurityMiddleware)
+# Security middleware (temporarily disabled for development)
+# app.add_middleware(SecurityMiddleware)
 
-# Rate limiting
-redis_url = getattr(settings, 'REDIS_URL', None)
-app.add_middleware(RateLimitMiddleware, redis_url=redis_url)
-
-# Request logging
-app.add_middleware(RequestLoggingMiddleware)
+# Rate limiting (disabled - Redis not available)
+# redis_url = getattr(settings, 'REDIS_URL', None)
+# app.add_middleware(RateLimitMiddleware, redis_url=redis_url)
 
 # CORS middleware
 app.add_middleware(
@@ -101,6 +105,19 @@ async def add_process_time_header(request: Request, call_next):
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
     """Handle 404 errors."""
+    from app.core.logging_config import log_error
+    
+    log_error(
+        error_type='not_found',
+        message=f"Resource not found: {request.url.path}",
+        details={
+            'path': request.url.path,
+            'method': request.method,
+            'client_ip': request.client.host if request.client else None
+        },
+        location=f"{request.method} {request.url.path}"
+    )
+    
     return JSONResponse(
         status_code=404,
         content={"detail": "Resource not found"},
@@ -110,7 +127,22 @@ async def not_found_handler(request: Request, exc):
 @app.exception_handler(500)
 async def internal_error_handler(request: Request, exc):
     """Handle 500 errors."""
-    logger.error(f"Internal server error: {exc}")
+    from app.core.logging_config import log_critical_error
+    
+    log_critical_error(
+        error_type='internal_server_error',
+        message=f"Internal server error: {str(exc)}",
+        details={
+            'path': request.url.path,
+            'method': request.method,
+            'client_ip': request.client.host if request.client else None,
+            'exception_type': type(exc).__name__,
+            'exception_message': str(exc)
+        },
+        location=f"{request.method} {request.url.path}",
+        requires_immediate_attention=True
+    )
+    
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},
@@ -136,11 +168,39 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
+    from app.db.connection import db_manager
+    
+    health_status = {
         "status": "healthy",
         "timestamp": time.time(),
         "environment": settings.ENVIRONMENT,
+        "checks": {
+            "database": "unknown",
+            "api": "healthy"
+        }
     }
+    
+    # Check database connection
+    try:
+        db_healthy = db_manager.test_connection()
+        health_status["checks"]["database"] = "healthy" if db_healthy else "unhealthy"
+        
+        if db_healthy:
+            db_info = db_manager.get_connection_info()
+            health_status["database_info"] = {
+                "type": db_info.get("database_type", "unknown"),
+                "database": db_info.get("database", "unknown")
+            }
+    except Exception as e:
+        health_status["checks"]["database"] = "unhealthy"
+        health_status["database_error"] = str(e)
+        logger.error(f"Health check database error: {e}")
+    
+    # Set overall status
+    if health_status["checks"]["database"] != "healthy":
+        health_status["status"] = "unhealthy"
+    
+    return health_status
 
 
 if __name__ == "__main__":

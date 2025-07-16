@@ -100,7 +100,7 @@ export default function DashboardPage() {
       title: 'Run Calculation',
       description: 'Perform engineering calculations',
       icon: Calculator,
-      href: '/calculations/new',
+      href: '/dashboard/calculations/new',
       color: 'bg-purple-500'
     },
     {

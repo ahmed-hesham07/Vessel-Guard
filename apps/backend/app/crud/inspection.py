@@ -12,7 +12,9 @@ from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import Session
 
 from app.crud.base import CRUDBase
-from app.db.models.inspection import Inspection
+from app.db.models.inspection import Inspection, InspectionStatus, InspectionResult
+from app.db.models.vessel import Vessel
+from app.db.models.project import Project
 from app.schemas.inspection import InspectionCreate, InspectionUpdate
 
 
@@ -28,10 +30,10 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .filter(
                 and_(
                     self.model.vessel_id == vessel_id,
-                    self.model.is_active == True
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.inspection_date.desc())
+            .order_by(self.model.actual_completion_date.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -53,11 +55,11 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .filter(
                 and_(
                     self.model.inspection_type == inspection_type,
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.is_active == True
+                    Vessel.project.has(Project.organization_id == organization_id),
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.inspection_date.desc())
+            .order_by(self.model.actual_completion_date.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -73,10 +75,10 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .filter(
                 and_(
                     self.model.vessel.has(project_id=project_id),
-                    self.model.is_active == True
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.inspection_date.desc())
+            .order_by(self.model.actual_completion_date.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -99,14 +101,14 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .join(self.model.vessel)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.next_inspection_date.isnot(None),
-                    self.model.next_inspection_date <= future_date,
-                    self.model.next_inspection_date >= datetime.utcnow(),
-                    self.model.is_active == True
+                    Vessel.project.has(Project.organization_id == organization_id),
+                    self.model.recommended_next_inspection.isnot(None),
+                    self.model.recommended_next_inspection <= future_date,
+                    self.model.recommended_next_inspection >= datetime.utcnow(),
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.next_inspection_date.asc())
+            .order_by(self.model.recommended_next_inspection.asc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -126,13 +128,13 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .join(self.model.vessel)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.next_inspection_date.isnot(None),
-                    self.model.next_inspection_date < datetime.utcnow(),
-                    self.model.is_active == True
+                    Vessel.project.has(Project.organization_id == organization_id),
+                    self.model.recommended_next_inspection.isnot(None),
+                    self.model.recommended_next_inspection < datetime.utcnow(),
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.next_inspection_date.asc())
+            .order_by(self.model.recommended_next_inspection.asc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -152,12 +154,12 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .join(self.model.vessel)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.result == "fail",
-                    self.model.is_active == True
+                    Vessel.project.has(Project.organization_id == organization_id),
+                    self.model.overall_result == InspectionResult.UNSAFE_FOR_OPERATION,
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.inspection_date.desc())
+            .order_by(self.model.actual_completion_date.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -179,12 +181,12 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .join(self.model.vessel)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.inspection_date >= cutoff_date,
-                    self.model.is_active == True
+                    Vessel.project.has(Project.organization_id == organization_id),
+                    self.model.actual_completion_date >= cutoff_date,
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.inspection_date.desc())
+            .order_by(self.model.actual_completion_date.desc())
             .limit(limit)
             .all()
         )
@@ -206,16 +208,16 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .join(self.model.vessel)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
+                    Vessel.project.has(Project.organization_id == organization_id),
                     or_(
-                        func.lower(self.model.inspector_name).contains(search_term),
+                        func.lower(self.model.inspector_notes).contains(search_term),
                         func.lower(self.model.inspection_type).contains(search_term),
-                        func.lower(self.model.findings).contains(search_term)
+                        func.lower(self.model.recommendations).contains(search_term)
                     ),
-                    self.model.is_active == True
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.inspection_date.desc())
+            .order_by(self.model.actual_completion_date.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -230,8 +232,8 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .join(self.model.vessel)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.is_active == True
+                    Vessel.project.has(Project.organization_id == organization_id),
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
         )
@@ -239,11 +241,11 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
         total_inspections = base_query.count()
         
         passed_inspections = base_query.filter(
-            self.model.result == "pass"
+            self.model.overall_result == InspectionResult.SATISFACTORY
         ).count()
         
         failed_inspections = base_query.filter(
-            self.model.result == "fail"
+            self.model.overall_result == InspectionResult.UNSAFE_FOR_OPERATION
         ).count()
         
         # Get overdue inspections count
@@ -251,8 +253,8 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             base_query
             .filter(
                 and_(
-                    self.model.next_inspection_date.isnot(None),
-                    self.model.next_inspection_date < datetime.utcnow()
+                    self.model.recommended_next_inspection.isnot(None),
+                    self.model.recommended_next_inspection < datetime.utcnow()
                 )
             )
             .count()
@@ -264,9 +266,9 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             base_query
             .filter(
                 and_(
-                    self.model.next_inspection_date.isnot(None),
-                    self.model.next_inspection_date <= future_date,
-                    self.model.next_inspection_date >= datetime.utcnow()
+                    self.model.recommended_next_inspection.isnot(None),
+                    self.model.recommended_next_inspection <= future_date,
+                    self.model.recommended_next_inspection >= datetime.utcnow()
                 )
             )
             .count()
@@ -306,14 +308,14 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
         db: Session, 
         *, 
         inspection_id: int, 
-        next_inspection_date: datetime,
+        recommended_next_inspection: datetime,
         interval_months: Optional[int] = None
     ) -> Optional[Inspection]:
         """Schedule next inspection."""
         inspection = self.get(db, id=inspection_id)
         if inspection:
             update_data = {
-                "next_inspection_date": next_inspection_date,
+                "recommended_next_inspection": recommended_next_inspection,
                 "inspection_interval_months": interval_months
             }
             return self.update(db, db_obj=inspection, obj_in=update_data)
@@ -328,7 +330,7 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .filter(
                 and_(
                     self.model.vessel_id == vessel_id,
-                    self.model.is_active == True
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
             .count()
@@ -343,8 +345,8 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .join(self.model.vessel)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.is_active == True
+                    Vessel.project.has(Project.organization_id == organization_id),
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
             .count()
@@ -359,10 +361,10 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .filter(
                 and_(
                     self.model.vessel_id == vessel_id,
-                    self.model.is_active == True
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.inspection_date.desc())
+            .order_by(self.model.actual_completion_date.desc())
             .first()
         )
 
@@ -381,11 +383,11 @@ class CRUDInspection(CRUDBase[Inspection, InspectionCreate, InspectionUpdate]):
             .filter(
                 and_(
                     self.model.vessel_id == vessel_id,
-                    self.model.inspection_date >= cutoff_date,
-                    self.model.is_active == True
+                    self.model.actual_completion_date >= cutoff_date,
+                    self.model.status != InspectionStatus.CANCELLED
                 )
             )
-            .order_by(self.model.inspection_date.desc())
+            .order_by(self.model.actual_completion_date.desc())
             .all()
         )
 

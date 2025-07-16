@@ -148,7 +148,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         self.log_sample_rate = getattr(settings, 'PERFORMANCE_LOG_SAMPLE_RATE', 0.1)  # Log 10% of requests
         
         # Background task for periodic metrics logging
-        self._start_metrics_task()
+        # self._start_metrics_task()  # Commented out to avoid event loop issues
     
     def _start_metrics_task(self):
         """Start background task for periodic metrics logging."""

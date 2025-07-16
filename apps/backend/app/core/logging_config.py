@@ -141,22 +141,85 @@ def setup_logging() -> None:
         }
     }
     
-    # Add file logging in production
-    if is_production:
-        config['handlers']['file'] = {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'level': log_level,
-            'formatter': 'json',
-            'filename': log_dir / 'vessel_guard.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 5,
-            'encoding': 'utf8'
-        }
-        
-        # Add file handler to all loggers
-        for logger_config in config['loggers'].values():
-            logger_config['handlers'].append('file')
-        config['root']['handlers'].append('file')
+    # Add comprehensive file logging for all environments
+    # Main application log file
+    config['handlers']['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'level': log_level,
+        'formatter': 'json' if is_production else 'detailed',
+        'filename': log_dir / 'vessel_guard.log',
+        'maxBytes': 10485760,  # 10MB
+        'backupCount': 5,
+        'encoding': 'utf8'
+    }
+    
+    # Error-specific log file
+    config['handlers']['error_file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'level': 'ERROR',
+        'formatter': 'json' if is_production else 'detailed',
+        'filename': log_dir / 'errors.log',
+        'maxBytes': 10485760,  # 10MB
+        'backupCount': 10,  # Keep more error logs
+        'encoding': 'utf8'
+    }
+    
+    # Security events log file
+    config['handlers']['security_file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'level': 'INFO',
+        'formatter': 'json',
+        'filename': log_dir / 'security.log',
+        'maxBytes': 5242880,  # 5MB
+        'backupCount': 10,
+        'encoding': 'utf8'
+    }
+    
+    # API access log file
+    config['handlers']['api_file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'level': 'INFO',
+        'formatter': 'json' if is_production else 'detailed',
+        'filename': log_dir / 'api_access.log',
+        'maxBytes': 10485760,  # 10MB
+        'backupCount': 5,
+        'encoding': 'utf8'
+    }
+    
+    # Database operations log file
+    config['handlers']['db_file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'level': 'INFO',
+        'formatter': 'json' if is_production else 'detailed',
+        'filename': log_dir / 'database.log',
+        'maxBytes': 5242880,  # 5MB
+        'backupCount': 5,
+        'encoding': 'utf8'
+    }
+    
+    # Add file handlers to all loggers
+    for logger_config in config['loggers'].values():
+        logger_config['handlers'].extend(['file', 'error_file'])
+    config['root']['handlers'].extend(['file', 'error_file'])
+    
+    # Add specialized handlers for specific loggers
+    config['loggers']['vessel_guard.security'] = {
+        'level': 'INFO',
+        'handlers': ['console', 'file', 'error_file', 'security_file'],
+        'propagate': False
+    }
+    
+    config['loggers']['vessel_guard.api'] = {
+        'level': 'INFO',
+        'handlers': ['console', 'file', 'error_file', 'api_file'],
+        'propagate': False
+    }
+    
+    config['loggers']['vessel_guard.database'] = {
+        'level': 'INFO',
+        'handlers': ['console', 'file', 'error_file', 'db_file'],
+        'propagate': False
+    }
     
     # Use rich handler in development
     if not is_production and sys.stdout.isatty():
@@ -363,3 +426,234 @@ def add_request_context(logger: logging.Logger, correlation_id: str = None, user
     """Add request context to logger."""
     context_filter = ContextFilter(correlation_id, user_id)
     logger.addFilter(context_filter)
+
+
+def log_error(error_type: str, message: str, details: Dict[str, Any] = None, 
+              location: str = None, user_id: str = None, request_id: str = None):
+    """Log comprehensive error information with context."""
+    logger = get_logger('vessel_guard.error')
+    
+    error_context = {
+        'error_type': error_type,
+        'error_event': True,
+        'timestamp': datetime.utcnow().isoformat() + 'Z',
+        'severity': 'ERROR'
+    }
+    
+    # Add location information
+    if location:
+        error_context['location'] = location
+    
+    # Add user context
+    if user_id:
+        error_context['user_id'] = user_id
+    
+    # Add request context
+    if request_id:
+        error_context['request_id'] = request_id
+    
+    # Add error details
+    if details:
+        error_context.update(details)
+    
+    logger.error(f"Error occurred: {error_type} - {message}", extra=error_context)
+
+
+def log_exception(exception: Exception, context: Dict[str, Any] = None, 
+                  location: str = None, user_id: str = None, request_id: str = None):
+    """Log exception with full traceback and context."""
+    logger = get_logger('vessel_guard.exception')
+    
+    exception_context = {
+        'exception_type': type(exception).__name__,
+        'exception_message': str(exception),
+        'error_event': True,
+        'timestamp': datetime.utcnow().isoformat() + 'Z',
+        'severity': 'ERROR'
+    }
+    
+    # Add location information
+    if location:
+        exception_context['location'] = location
+    
+    # Add user context
+    if user_id:
+        exception_context['user_id'] = user_id
+    
+    # Add request context
+    if request_id:
+        exception_context['request_id'] = request_id
+    
+    # Add additional context
+    if context:
+        exception_context.update(context)
+    
+    logger.exception(f"Exception occurred: {type(exception).__name__}", extra=exception_context)
+
+
+def log_database_error(operation: str, table: str, error: Exception, 
+                      query: str = None, params: Dict[str, Any] = None):
+    """Log database-specific errors with query context."""
+    logger = get_logger('vessel_guard.database.error')
+    
+    db_error_context = {
+        'error_type': 'database_error',
+        'operation': operation,
+        'table': table,
+        'exception_type': type(error).__name__,
+        'exception_message': str(error),
+        'error_event': True,
+        'database_operation': True,
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }
+    
+    # Add query information (sanitized)
+    if query:
+        db_error_context['query'] = query[:500]  # Truncate long queries
+    
+    # Add parameters (sanitized)
+    if params:
+        # Remove sensitive data from parameters
+        safe_params = {k: v for k, v in params.items() 
+                      if k.lower() not in ['password', 'token', 'secret']}
+        db_error_context['params'] = safe_params
+    
+    logger.error(f"Database error in {operation} on {table}: {str(error)}", 
+                extra=db_error_context)
+
+
+def log_authentication_error(error_type: str, details: Dict[str, Any] = None,
+                            ip_address: str = None, user_agent: str = None):
+    """Log authentication and authorization errors."""
+    logger = get_logger('vessel_guard.auth.error')
+    
+    auth_error_context = {
+        'error_type': 'auth_error',
+        'auth_error_type': error_type,
+        'security_event': True,
+        'error_event': True,
+        'timestamp': datetime.utcnow().isoformat() + 'Z',
+        'severity': 'WARNING'
+    }
+    
+    # Add request context
+    if ip_address:
+        auth_error_context['ip_address'] = ip_address
+    
+    if user_agent:
+        auth_error_context['user_agent'] = user_agent
+    
+    # Add error details
+    if details:
+        auth_error_context.update(details)
+    
+    logger.warning(f"Authentication error: {error_type}", extra=auth_error_context)
+
+
+def log_critical_error(error_type: str, message: str, details: Dict[str, Any] = None,
+                      location: str = None, requires_immediate_attention: bool = True):
+    """Log critical errors that require immediate attention."""
+    logger = get_logger('vessel_guard.critical')
+    
+    critical_context = {
+        'error_type': error_type,
+        'critical_error': True,
+        'error_event': True,
+        'requires_immediate_attention': requires_immediate_attention,
+        'timestamp': datetime.utcnow().isoformat() + 'Z',
+        'severity': 'CRITICAL'
+    }
+    
+    # Add location information
+    if location:
+        critical_context['location'] = location
+    
+    # Add error details
+    if details:
+        critical_context.update(details)
+    
+    logger.critical(f"CRITICAL ERROR: {error_type} - {message}", extra=critical_context)
+
+
+# Error tracking decorator
+def track_errors(operation_name: str = None, log_args: bool = False):
+    """Decorator to automatically track errors in functions."""
+    def decorator(func):
+        import functools
+        
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            op_name = operation_name or f"{func.__module__}.{func.__name__}"
+            
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                error_context = {
+                    'function': func.__name__,
+                    'function_module': func.__module__,
+                    'operation': op_name
+                }
+                
+                # Add arguments if requested (be careful with sensitive data)
+                if log_args:
+                    error_context['args_count'] = len(args)
+                    error_context['kwargs_keys'] = list(kwargs.keys())
+                
+                log_exception(e, context=error_context, location=op_name)
+                raise
+        
+        return wrapper
+    return decorator
+
+
+def create_error_summary_report(hours_back: int = 24) -> Dict[str, Any]:
+    """Create a summary report of errors in the last N hours."""
+    from datetime import datetime, timedelta
+    
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours_back)
+    
+    # Query logs for error events
+    logger = get_logger('vessel_guard.error')
+    error_logs = logger.logger.handlers[0].baseFilename
+    
+    # Read and parse log file
+    from collections import defaultdict
+    import json
+    
+    error_summary = defaultdict(lambda: {'count': 0, 'last_seen': None, 'details': []})
+    
+    try:
+        with open(error_logs, 'r', encoding='utf8') as f:
+            for line in f:
+                if '"error_event": true' in line:
+                    try:
+                        log_entry = json.loads(line)
+                        
+                        # Filter by time range
+                        log_time = datetime.fromisoformat(log_entry['timestamp'].replace('Z', '+00:00'))
+                        if log_time < cutoff_time:
+                            continue
+                        
+                        error_type = log_entry.get('error_type', 'unknown')
+                        error_summary[error_type]['count'] += 1
+                        error_summary[error_type]['last_seen'] = log_time.isoformat()
+                        error_summary[error_type]['details'].append(log_entry)
+                    except Exception:
+                        continue
+    except Exception as e:
+        logger.error(f"Failed to read error log file for report: {str(e)}")
+    
+    return {
+        'from': cutoff_time.isoformat(),
+        'to': datetime.utcnow().isoformat(),
+        'error_count': sum(summary['count'] for summary in error_summary.values()),
+        'errors': [
+            {
+                'type': error_type,
+                'count': summary['count'],
+                'last_seen': summary['last_seen'],
+                'details': summary['details'][:5]  # Limit details
+            }
+            for error_type, summary in error_summary.items()
+        ]
+    }

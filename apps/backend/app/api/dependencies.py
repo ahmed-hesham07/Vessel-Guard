@@ -5,12 +5,12 @@ Provides dependency injection for FastAPI endpoints including
 user authentication, database sessions, and permission checks.
 """
 
-from typing import Generator, Optional
+from typing import Generator, Optional, Union, List
 
-import jwt
-from fastapi import Depends, HTTPException, status
+from jose import jwt
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
-from jwt.exceptions import JWTDecodeError as InvalidTokenError
+from jose.exceptions import JWTError as InvalidTokenError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -120,12 +120,13 @@ def get_current_superuser(
     return current_user
 
 
-def require_role(required_role: UserRole):
+def require_role(required_role: Union[UserRole, List[UserRole], str, List[str]]):
     """
     Dependency factory for role-based access control.
     
     Args:
-        required_role: Minimum required role
+        required_role: Minimum required role(s). Can be a single role or list of roles.
+                      Supports both UserRole enum and string values.
         
     Returns:
         Dependency function that checks user role
@@ -139,14 +140,60 @@ def require_role(required_role: UserRole):
             UserRole.ADMIN: 4
         }
         
-        user_level = role_hierarchy.get(current_user.role, 0)
-        required_level = role_hierarchy.get(required_role, 0)
+        # Convert string roles to UserRole enum
+        string_to_role = {
+            "viewer": UserRole.VIEWER,
+            "inspector": UserRole.INSPECTOR,
+            "engineer": UserRole.ENGINEER,
+            "manager": UserRole.MANAGER,
+            "admin": UserRole.ADMIN,
+            "organization_admin": UserRole.ADMIN,
+            "super_admin": UserRole.ADMIN
+        }
         
-        if user_level < required_level and not current_user.is_superuser:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Insufficient permissions. Required: {required_role}, Current: {current_user.role}"
-            )
+        user_level = role_hierarchy.get(current_user.role, 0)
+        
+        # Handle single role or list of roles
+        if isinstance(required_role, list):
+            # Check if user has any of the required roles
+            allowed = False
+            for role in required_role:
+                if isinstance(role, str):
+                    role_enum = string_to_role.get(role.lower())
+                    if role_enum is None:
+                        continue
+                else:
+                    role_enum = role
+                
+                required_level = role_hierarchy.get(role_enum, 0)
+                if user_level >= required_level:
+                    allowed = True
+                    break
+            
+            if not allowed and not current_user.is_superuser:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Insufficient permissions. Required one of: {required_role}, Current: {current_user.role}"
+                )
+        else:
+            # Handle single role
+            if isinstance(required_role, str):
+                role_enum = string_to_role.get(required_role.lower())
+                if role_enum is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Invalid role: {required_role}"
+                    )
+            else:
+                role_enum = required_role
+                
+            required_level = role_hierarchy.get(role_enum, 0)
+            
+            if user_level < required_level and not current_user.is_superuser:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Insufficient permissions. Required: {required_role}, Current: {current_user.role}"
+                )
         
         return current_user
     
@@ -296,3 +343,20 @@ class Pagination:
             "order": self.order,
             "offset": self.offset
         }
+
+
+def get_pagination_params(
+    skip: int = Query(0, ge=0, description="Number of items to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of items to return")
+):
+    """
+    Get pagination parameters for API endpoints.
+    
+    Args:
+        skip: Number of items to skip (offset)
+        limit: Maximum number of items to return
+        
+    Returns:
+        Dictionary with skip and limit values
+    """
+    return {"skip": skip, "limit": limit}
