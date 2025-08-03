@@ -18,7 +18,7 @@ class VesselBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=200, description="Vessel name")
     description: Optional[str] = Field(None, max_length=1000, description="Vessel description")
     vessel_type: str = Field(..., description="Type of vessel")
-    service: Optional[str] = Field(None, max_length=200, description="Vessel service/purpose")
+    service_fluid: Optional[str] = Field(None, max_length=200, description="Vessel service fluid/purpose")
     location: Optional[str] = Field(None, max_length=200, description="Vessel location")
 
     @validator('tag_number')
@@ -138,7 +138,7 @@ class VesselUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
     vessel_type: Optional[str] = None
-    service: Optional[str] = Field(None, max_length=200)
+    service_fluid: Optional[str] = Field(None, max_length=200)
     location: Optional[str] = Field(None, max_length=200)
     
     # Design parameters
@@ -300,7 +300,7 @@ class VesselSummary(BaseModel):
     tag_number: str
     name: str
     vessel_type: str
-    service: Optional[str]
+    service_fluid: Optional[str]
     next_inspection_date: Optional[datetime]
     is_active: bool
 

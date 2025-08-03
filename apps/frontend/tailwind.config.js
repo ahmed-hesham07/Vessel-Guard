@@ -7,6 +7,21 @@ module.exports = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    screens: {
+      'xs': '475px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+      // Mobile-first approach
+      'mobile': {'max': '767px'},
+      'tablet': {'min': '768px', 'max': '1023px'},
+      'desktop': {'min': '1024px'},
+      // Touch device detection
+      'touch': {'raw': '(hover: none) and (pointer: coarse)'},
+      'no-touch': {'raw': '(hover: hover) and (pointer: fine)'},
+    },
   	extend: {
   		colors: {
   			primary: {

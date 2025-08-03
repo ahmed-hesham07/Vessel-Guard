@@ -296,6 +296,31 @@ class EmailService:
             template_data=template_data
         )
     
+    def send_inspection_report_notification(
+        self,
+        recipients: List[EmailRecipient],
+        inspection_data: Dict[str, Any]
+    ) -> bool:
+        """Send notification when inspection report is generated."""
+        template_data = {
+            "subject": f"Technical Inspection Report Ready: {inspection_data.get('inspection_number', 'Inspection')}",
+            "inspection_number": inspection_data.get("inspection_number"),
+            "inspection_type": inspection_data.get("inspection_type"),
+            "vessel_tag": inspection_data.get("vessel_tag"),
+            "vessel_name": inspection_data.get("vessel_name"),
+            "inspector_name": inspection_data.get("inspector_name"),
+            "report_title": inspection_data.get("report_title"),
+            "report_download_url": inspection_data.get("report_download_url"),
+            "generated_at": inspection_data.get("generated_at"),
+            "dashboard_url": f"{getattr(settings, 'FRONTEND_URL', '')}/reports"
+        }
+        
+        return self.send_template_email(
+            recipients=recipients,
+            template_name="inspection_report_ready",
+            template_data=template_data
+        )
+    
     def send_welcome_email(
         self,
         recipient: EmailRecipient,

@@ -1,4 +1,23 @@
 import '@testing-library/jest-dom'
+import 'whatwg-fetch'
+
+// Add polyfills for Node.js environment
+global.TextEncoder = require('util').TextEncoder
+global.TextDecoder = require('util').TextDecoder
+
+// Mock BroadcastChannel for MSW
+global.BroadcastChannel = class BroadcastChannel {
+  constructor(name) {
+    this.name = name
+  }
+  postMessage() {}
+  close() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+
+// Set up environment variables for testing
+process.env.NEXT_PUBLIC_API_URL = 'http://localhost:8000'
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {

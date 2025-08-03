@@ -446,9 +446,4 @@ def get_available_roles(
     """
     Get available roles that current user can assign.
     """
-    if current_user.role == "super_admin":
-        return ["user", "engineer", "organization_admin", "super_admin"]
-    elif current_user.role == "organization_admin":
-        return ["user", "engineer", "organization_admin"]
-    else:
-        return []
+    return ["engineer", "consultant"]

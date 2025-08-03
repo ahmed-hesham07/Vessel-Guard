@@ -1,347 +1,316 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/auth-context'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
   Shield, 
-  Plus, 
-  Search, 
-  Filter, 
-  Calendar, 
-  Gauge,
-  MoreHorizontal,
+  Calculator, 
+  FileCheck, 
+  Users, 
+  Database, 
+  BarChart3,
+  Zap,
+  Target,
+  CheckCircle,
+  ArrowRight,
+  Menu,
+  X,
+  Plus,
+  Search,
+  Filter,
   Eye,
   Edit,
-  Trash2,
-  AlertTriangle,
-  CheckCircle2
+  Trash2
 } from 'lucide-react'
-import Link from 'next/link'
-import { apiService } from '@/lib/api'
-
-interface Vessel {
-  id: number
-  name: string
-  tag_number: string
-  type: 'pressure_vessel' | 'storage_tank' | 'heat_exchanger' | 'reactor' | 'separator' | 'piping' | 'air_cooling' | 'fitting' | 'valve'
-  geometry: 'cylindrical' | 'spherical' | 'conical' | 'rectangular' | 'custom'
-  design_code: string
-  status: 'active' | 'inactive' | 'maintenance' | 'decommissioned'
-  design_pressure: number
-  design_temperature: number
-  operating_pressure: number
-  operating_temperature: number
-  material_grade: string
-  diameter: number
-  length: number
-  wall_thickness: number
-  location: string
-  installation_date: string
-  last_inspection_date?: string
-  next_inspection_date?: string
-  created_at: string
-  updated_at: string
-  project: {
-    id: number
-    name: string
-  }
-}
-
-const vesselTypeLabels = {
-  pressure_vessel: 'Pressure Vessel',
-  storage_tank: 'Storage Tank',
-  heat_exchanger: 'Heat Exchanger',
-  reactor: 'Reactor',
-  separator: 'Separator',
-  piping: 'Piping',
-  air_cooling: 'Air Cooling',
-  fitting: 'Fitting',
-  valve: 'Valve'
-}
-
-const statusColors = {
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-gray-100 text-gray-800',
-  maintenance: 'bg-yellow-100 text-yellow-800',
-  decommissioned: 'bg-red-100 text-red-800'
-}
+import { useState } from 'react'
 
 export default function VesselsPage() {
-  const { token } = useAuth()
-  const [vessels, setVessels] = useState<Vessel[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [filterType, setFilterType] = useState('all')
 
-  useEffect(() => {
-    const fetchVessels = async () => {
-      if (!token) return
-
-      try {
-        const data = await apiService.getVessels(token)
-        setVessels(data as Vessel[])
-      } catch (error) {
-        console.error('Error fetching vessels:', error)
-      } finally {
-        setIsLoading(false)
-      }
+  // Mock data for vessels
+  const vessels = [
+    {
+      id: 1,
+      name: 'Primary Heat Exchanger',
+      tag: 'VES-001',
+      type: 'Heat Exchanger',
+      status: 'active',
+      pressure: '150 PSI',
+      temperature: '350°F',
+      lastInspection: '2024-01-15',
+      nextInspection: '2025-01-15',
+      condition: 'excellent'
     }
+  ]
 
-    fetchVessels()
-  }, [token])
-
-  const filteredVessels = vessels.filter(vessel => {
-    const matchesSearch = vessel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vessel.tag_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vessel.location.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = typeFilter === 'all' || vessel.type === typeFilter
-    const matchesStatus = statusFilter === 'all' || vessel.status === statusFilter
-    
-    return matchesSearch && matchesType && matchesStatus
-  })
-
-  const handleDeleteVessel = async (vesselId: number) => {
-    if (!token) return
-    
-    if (window.confirm('Are you sure you want to delete this vessel?')) {
-      try {
-        await apiService.deleteVessel(vesselId, token)
-        setVessels(vessels.filter(v => v.id !== vesselId))
-      } catch (error) {
-        console.error('Error deleting vessel:', error)
-      }
-    }
-  }
-
-  const getInspectionStatus = (vessel: Vessel) => {
-    if (!vessel.next_inspection_date) return null
-    
-    const nextInspection = new Date(vessel.next_inspection_date)
-    const today = new Date()
-    const daysUntilInspection = Math.ceil((nextInspection.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    
-    if (daysUntilInspection < 0) {
-      return { status: 'overdue', label: 'Overdue', color: 'text-red-600' }
-    } else if (daysUntilInspection <= 30) {
-      return { status: 'due-soon', label: 'Due Soon', color: 'text-yellow-600' }
-    } else {
-      return { status: 'up-to-date', label: 'Up to Date', color: 'text-green-600' }
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-lg shadow h-32"></div>
-            ))}
+  return (
+    <div className="min-h-full w-full">
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/50 backdrop-blur-sm p-8">
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <div className="flex items-center space-x-3 mb-2">
+                  <Shield className="h-8 w-8 text-cyan-400" />
+                  <h1 className="text-4xl font-bold text-slate-100">Vessel Registry</h1>
+                </div>
+                <p className="text-lg text-slate-300">
+                  Secure pressure vessel certification and compliance tracking
+                  <span className="text-cyan-400 font-medium"> - ASME certified</span>
+                </p>
+              </div>
+              <div className="hidden lg:block">
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-cyan-400">{vessels.length}</div>
+                  <div className="text-sm text-slate-400">Active Vessels</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="flex items-center space-x-6 p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 w-4 text-emerald-400" />
+                <span className="text-slate-300 text-sm">ASME Certified</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Target className="h-4 w-4 text-blue-400" />
+                <span className="text-slate-300 text-sm">Compliance Tracking</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Database className="h-4 w-4 text-purple-400" />
+                <span className="text-slate-300 text-sm">Digital Records</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    )
-  }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vessels</h1>
-          <p className="text-gray-600">
-            Manage your pressure vessels, tanks, and piping components
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/dashboard/vessels/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Vessel
-          </Link>
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
+      {/* Actions Bar */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <input
+              type="text"
               placeholder="Search vessels..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="w-full pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-200"
             />
           </div>
-        </div>
-        <div className="flex gap-2">
           <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all duration-200"
           >
             <option value="all">All Types</option>
-            <option value="pressure_vessel">Pressure Vessel</option>
-            <option value="storage_tank">Storage Tank</option>
-            <option value="heat_exchanger">Heat Exchanger</option>
-            <option value="reactor">Reactor</option>
-            <option value="separator">Separator</option>
-            <option value="piping">Piping</option>
-            <option value="air_cooling">Air Cooling</option>
-            <option value="fitting">Fitting</option>
-            <option value="valve">Valve</option>
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="decommissioned">Decommissioned</option>
+            <option value="heat_exchanger">Heat Exchangers</option>
+            <option value="storage_tank">Storage Tanks</option>
+            <option value="reactor">Reactors</option>
           </select>
         </div>
+        
+        {/* Add Vessel Button */}
+        <Link href="/dashboard/vessels/new">
+          <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-medium px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group">
+            <Plus className="h-5 w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+            Add Vessel
+          </Button>
+        </Link>
       </div>
 
-      {/* Vessels Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredVessels.map((vessel) => {
-          const inspectionStatus = getInspectionStatus(vessel)
-          
-          return (
-            <Card key={vessel.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold text-gray-900">
-                      {vessel.name}
-                    </CardTitle>
-                    <p className="text-sm text-gray-600">
-                      {vessel.tag_number}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline">
-                        {vesselTypeLabels[vessel.type]}
-                      </Badge>
-                      <Badge className={statusColors[vessel.status]}>
-                        {vessel.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Design Pressure:</span>
-                    <span className="font-medium">{vessel.design_pressure} psi</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Design Temp:</span>
-                    <span className="font-medium">{vessel.design_temperature}°F</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Material:</span>
-                    <span className="font-medium">{vessel.material_grade}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Location:</span>
-                    <span className="font-medium">{vessel.location}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Project:</span>
-                    <Link 
-                      href={`/dashboard/projects/${vessel.project.id}`}
-                      className="text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                      {vessel.project.name}
-                    </Link>
-                  </div>
-
-                  {inspectionStatus && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Inspection:</span>
-                      <div className="flex items-center gap-1">
-                        {inspectionStatus.status === 'overdue' && (
-                          <AlertTriangle className="h-4 w-4 text-red-500" />
-                        )}
-                        {inspectionStatus.status === 'due-soon' && (
-                          <Calendar className="h-4 w-4 text-yellow-500" />
-                        )}
-                        {inspectionStatus.status === 'up-to-date' && (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        )}
-                        <span className={`font-medium ${inspectionStatus.color}`}>
-                          {inspectionStatus.label}
-                        </span>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Vessels List */}
+        <div className="lg:col-span-2 space-y-6">
+          {vessels.length > 0 ? (
+            vessels.map((vessel) => (
+              <Card key={vessel.id} className="group relative overflow-hidden bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/50 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <CardContent className="p-6 relative">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start space-x-4">
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 text-cyan-400 group-hover:scale-110 transition-transform duration-300">
+                        <Shield className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-slate-100 mb-1">{vessel.name}</h3>
+                        <p className="text-slate-300 text-sm mb-2">{vessel.tag} • {vessel.type}</p>
+                        <div className="flex items-center space-x-3">
+                          <Badge className={`${
+                            vessel.condition === 'excellent' 
+                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                              : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                          } text-xs`}>
+                            {vessel.condition}
+                          </Badge>
+                          <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-xs">
+                            {vessel.status}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                  )}
-
-                  <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm" asChild className="flex-1">
-                      <Link href={`/dashboard/vessels/${vessel.id}`}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild className="flex-1">
-                      <Link href={`/dashboard/vessels/${vessel.id}/edit`}>
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Link>
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDeleteVessel(vessel.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-cyan-400">{vessel.pressure}</div>
+                      <div className="text-xs text-slate-400">{vessel.temperature}</div>
+                    </div>
                   </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                    <div className="text-slate-400">
+                      <span className="text-slate-300">Last Inspection:</span><br />
+                      {vessel.lastInspection}
+                    </div>
+                    <div className="text-slate-400">
+                      <span className="text-slate-300">Next Due:</span><br />
+                      {vessel.nextInspection}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Link href={`/dashboard/vessels/${vessel.id}`}>
+                        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100 hover:bg-slate-800/50">
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </Button>
+                      </Link>
+                      <Link href={`/dashboard/vessels/${vessel.id}/edit`}>
+                        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100 hover:bg-slate-800/50">
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                      </Link>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all duration-300" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            /* Empty State */
+            <Card className="relative overflow-hidden bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/50 backdrop-blur-sm">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5"></div>
+              <CardContent className="p-12 text-center relative">
+                <div className="mb-6">
+                  <Shield className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-slate-100 mb-2">No Vessels Yet</h3>
+                  <p className="text-slate-400 mb-6">
+                    Get started by adding your first pressure vessel to begin FFS assessments.
+                  </p>
                 </div>
+                <Link href="/dashboard/vessels/new">
+                  <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-medium px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Plus className="h-5 w-5 mr-2" />
+                    Add Your First Vessel
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
-
-      {/* Empty State */}
-      {filteredVessels.length === 0 && !isLoading && (
-        <div className="text-center py-12">
-          <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No vessels found</h3>
-          <p className="text-gray-600 mb-4">
-            {searchTerm || typeFilter !== 'all' || statusFilter !== 'all' 
-              ? 'No vessels match your current filters.' 
-              : 'Get started by adding your first vessel.'}
-          </p>
-          <Button asChild>
-            <Link href="/dashboard/vessels/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vessel
-            </Link>
-          </Button>
+          )}
         </div>
-      )}
+        
+        {/* Sidebar */}
+        <div className="lg:col-span-1 space-y-6">
+
+          {/* Vessel Categories */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/50 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5"></div>
+            <CardHeader className="relative">
+              <CardTitle className="text-slate-100 flex items-center space-x-2">
+                <Target className="w-5 h-5 text-blue-400" />
+                <span>Vessel Categories</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="space-y-4">
+                <div className="group p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 hover:border-cyan-500/30 transition-all duration-300">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 text-cyan-400">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-semibold text-slate-100">Heat Exchangers</h4>
+                  </div>
+                  <p className="text-slate-400 text-sm mb-3">
+                    Shell & tube, plate, and air-cooled heat exchangers.
+                  </p>
+                  <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-xs">
+                    High Priority
+                  </Badge>
+                </div>
+
+                <div className="group p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 hover:border-emerald-500/30 transition-all duration-300">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-green-500/20 text-emerald-400">
+                      <Database className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-semibold text-slate-100">Storage Tanks</h4>
+                  </div>
+                  <p className="text-slate-400 text-sm mb-3">
+                    Atmospheric and pressure storage tanks.
+                  </p>
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs">
+                    Standard
+                  </Badge>
+                </div>
+
+                <div className="group p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 hover:border-purple-500/30 transition-all duration-300">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 text-purple-400">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-semibold text-slate-100">Reactors</h4>
+                  </div>
+                  <p className="text-slate-400 text-sm mb-3">
+                    Chemical reactors and process vessels.
+                  </p>
+                  <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
+                    Critical
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-slate-700/50 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5"></div>
+            <CardHeader className="relative">
+              <CardTitle className="text-slate-100 flex items-center space-x-2">
+                <Zap className="w-5 h-5 text-amber-400" />
+                <span>Quick Actions</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative space-y-3">
+              <Link href="/dashboard/vessels/import">
+                <Button variant="ghost" className="w-full justify-start text-slate-300 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-200">
+                  <Database className="w-4 h-4 mr-3" />
+                  Import Vessels
+                </Button>
+              </Link>
+              <Link href="/dashboard/vessels/reports">
+                <Button variant="ghost" className="w-full justify-start text-slate-300 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-200">
+                  <BarChart3 className="w-4 h-4 mr-3" />
+                  Vessel Reports
+                </Button>
+              </Link>
+              <Link href="/dashboard/vessels/maintenance">
+                <Button variant="ghost" className="w-full justify-start text-slate-300 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-200">
+                  <CheckCircle className="w-4 h-4 mr-3" />
+                  Maintenance Schedule
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

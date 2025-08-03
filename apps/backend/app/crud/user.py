@@ -5,7 +5,7 @@ Provides database operations for user management including
 authentication, profile updates, and user administration.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
@@ -82,6 +82,10 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         if not user:
             return None
         
+        # Check if account is locked before attempting password verification
+        if self.is_locked(user):
+            return None
+        
         if not verify_password(password, user.hashed_password):
             # Increment failed login attempts
             self.increment_failed_login_attempts(db, user=user)
@@ -142,7 +146,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         
         # Lock account after 5 failed attempts for 15 minutes
         if user.failed_login_attempts >= 5:
-            user.locked_until = datetime.utcnow() + datetime.timedelta(minutes=15)
+            user.locked_until = datetime.utcnow() + timedelta(minutes=15)
         
         db.add(user)
         db.commit()
@@ -180,7 +184,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             Updated user
         """
         user.password_reset_token = token
-        user.password_reset_expires = datetime.utcnow() + datetime.timedelta(hours=24)
+        user.password_reset_expires = datetime.utcnow() + timedelta(hours=24)
         db.add(user)
         db.commit()
         db.refresh(user)

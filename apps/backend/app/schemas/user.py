@@ -27,7 +27,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """User creation model."""
     password: str = Field(..., min_length=8)
-    role: UserRole = Field(default=UserRole.VIEWER)
+    role: UserRole = Field(default=UserRole.ENGINEER)
     organization_id: Optional[int] = None
 
     @validator('password')

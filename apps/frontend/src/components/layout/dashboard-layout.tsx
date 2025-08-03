@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/auth-context'
 import Header from '@/components/header'
 import Sidebar from '@/components/sidebar'
 import MobileNavigation from '@/components/mobile-navigation'
+import EnhancedMobileNavigation from '@/components/mobile/enhanced-mobile-navigation'
+import MobileTabBar from '@/components/mobile/mobile-tab-bar'
 import ErrorBoundary from '@/components/error-boundary'
 import { Shield, Menu, X } from 'lucide-react'
 import { useState } from 'react'
@@ -50,33 +52,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   if (isDashboardPage) {
     return (
       <ErrorBoundary>
-        <div className="h-screen flex overflow-hidden bg-gray-50">
+        <div className="h-screen flex overflow-hidden bg-slate-950">
           <Sidebar />
-          <MobileNavigation 
+          <EnhancedMobileNavigation 
             isOpen={mobileMenuOpen} 
             onClose={() => setMobileMenuOpen(false)} 
           />
           
           <div className="flex flex-col w-0 flex-1 overflow-hidden md:ml-64">
-            {/* Mobile header for dashboard */}
-            <div className="md:hidden bg-white shadow-sm border-b border-gray-200">
+            {/* Enhanced Mobile header for dashboard */}
+            <div className="lg:hidden bg-slate-900/95 backdrop-blur-sm shadow-lg border-b border-slate-800/50 mobile-safe-top">
               <div className="px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setMobileMenuOpen(true)}
-                    className="h-8 w-8"
+                    className="touch-icon-button text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 mobile-focus"
                   >
-                    <Menu className="h-4 w-4" />
+                    <Menu className="mobile-engineering-icon" />
                   </Button>
                   <div className="flex items-center space-x-2">
-                    <Shield className="h-6 w-6 text-blue-600" />
-                    <span className="font-semibold text-gray-900">Vessel Guard</span>
+                    <Shield className="mobile-engineering-icon text-cyan-400" />
+                    <span className="mobile-heading-3 text-slate-100">Vessel Guard Pro</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg touch-target">
                     <span className="text-sm font-medium text-white">
                       {user?.email?.[0]?.toUpperCase() || 'U'}
                     </span>
@@ -85,14 +87,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
             </div>
             
-            <main className="flex-1 relative overflow-y-auto focus:outline-none">
-              <div className="py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+            <main className="flex-1 relative overflow-y-auto focus:outline-none bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+              <div className="min-h-full w-full">
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
                   {children}
                 </div>
               </div>
             </main>
           </div>
+          
+          {/* Mobile Tab Bar */}
+          <MobileTabBar />
         </div>
       </ErrorBoundary>
     )

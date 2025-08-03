@@ -19,6 +19,9 @@ from app.crud.user import user_crud
 from app.db.base import get_db
 from app.db.models.user import User, UserRole
 from app.db.models.organization import Organization
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(
@@ -133,22 +136,19 @@ def require_role(required_role: Union[UserRole, List[UserRole], str, List[str]])
     """
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
         role_hierarchy = {
-            UserRole.VIEWER: 0,
-            UserRole.INSPECTOR: 1,
-            UserRole.ENGINEER: 2,
-            UserRole.MANAGER: 3,
-            UserRole.ADMIN: 4
+            UserRole.CONSULTANT: 1,
+            UserRole.ENGINEER: 2
         }
         
         # Convert string roles to UserRole enum
+        # Map old role names to the simplified role system
         string_to_role = {
-            "viewer": UserRole.VIEWER,
-            "inspector": UserRole.INSPECTOR,
+            "consultant": UserRole.CONSULTANT,
             "engineer": UserRole.ENGINEER,
-            "manager": UserRole.MANAGER,
-            "admin": UserRole.ADMIN,
-            "organization_admin": UserRole.ADMIN,
-            "super_admin": UserRole.ADMIN
+            # Legacy role mappings for backward compatibility
+            "admin": UserRole.ENGINEER,
+            "organization_admin": UserRole.ENGINEER,
+            "super_admin": UserRole.ENGINEER,
         }
         
         user_level = role_hierarchy.get(current_user.role, 0)
@@ -161,10 +161,16 @@ def require_role(required_role: Union[UserRole, List[UserRole], str, List[str]])
                 if isinstance(role, str):
                     role_enum = string_to_role.get(role.lower())
                     if role_enum is None:
+                        logger.warning(f"Unknown role string: {role}")
                         continue
                 else:
                     role_enum = role
                 
+                # Ensure role_enum is not a list (safety check)
+                if isinstance(role_enum, list):
+                    logger.error(f"Role enum is unexpectedly a list: {role_enum}")
+                    continue
+                    
                 required_level = role_hierarchy.get(role_enum, 0)
                 if user_level >= required_level:
                     allowed = True
@@ -180,12 +186,21 @@ def require_role(required_role: Union[UserRole, List[UserRole], str, List[str]])
             if isinstance(required_role, str):
                 role_enum = string_to_role.get(required_role.lower())
                 if role_enum is None:
+                    logger.error(f"Invalid role string: {required_role}")
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Invalid role: {required_role}"
                     )
             else:
                 role_enum = required_role
+            
+            # Ensure role_enum is not a list (safety check)
+            if isinstance(role_enum, list):
+                logger.error(f"Single role is unexpectedly a list: {role_enum}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Internal role configuration error"
+                )
                 
             required_level = role_hierarchy.get(role_enum, 0)
             
@@ -202,12 +217,12 @@ def require_role(required_role: Union[UserRole, List[UserRole], str, List[str]])
 
 def require_admin():
     """Require admin role."""
-    return require_role(UserRole.ADMIN)
+    return require_role(UserRole.ENGINEER)
 
 
 def require_manager():
     """Require manager role or higher."""
-    return require_role(UserRole.MANAGER)
+    return require_role(UserRole.ENGINEER)
 
 
 def require_engineer():
@@ -215,9 +230,14 @@ def require_engineer():
     return require_role(UserRole.ENGINEER)
 
 
+def require_consultant():
+    """Require consultant role or higher."""
+    return require_role(UserRole.CONSULTANT)
+
+
 def require_inspector():
     """Require inspector role or higher."""
-    return require_role(UserRole.INSPECTOR)
+    return require_role(UserRole.CONSULTANT)
 
 
 def get_current_organization(
@@ -305,7 +325,9 @@ def get_optional_user(
         if user and user.is_active:
             return user
             
-    except (InvalidTokenError, ValueError):
+    except (InvalidTokenError, ValueError) as e:
+        # Invalid token - this is expected for optional authentication
+        logger.debug(f"Invalid token in optional auth: {e}")
         pass
     
     return None

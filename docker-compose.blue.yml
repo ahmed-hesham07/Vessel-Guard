@@ -1,0 +1,62 @@
+# Blue environment deployment for blue-green deployments
+version: '3.8'
+
+services:
+  backend:
+    container_name: vessel-guard-backend-blue
+    ports:
+      - "8000:8000"  # Standard port for blue environment
+    environment:
+      - DEPLOYMENT_COLOR=blue
+    labels:
+      - "traefik.http.routers.backend-blue.rule=Host(`blue.vessel-guard.com`)"
+      - "traefik.http.routers.backend-blue.service=backend-blue"
+      - "traefik.http.services.backend-blue.loadbalancer.server.port=8000"
+      - "deployment.color=blue"
+    networks:
+      - vessel-guard-network
+
+  frontend:
+    container_name: vessel-guard-frontend-blue
+    ports:
+      - "3000:3000"  # Standard port for blue environment
+    environment:
+      - NEXT_PUBLIC_API_URL=http://blue.vessel-guard.com:8000
+      - DEPLOYMENT_COLOR=blue
+    labels:
+      - "traefik.http.routers.frontend-blue.rule=Host(`blue.vessel-guard.com`)"
+      - "traefik.http.routers.frontend-blue.service=frontend-blue"
+      - "traefik.http.services.frontend-blue.loadbalancer.server.port=3000"
+      - "deployment.color=blue"
+    networks:
+      - vessel-guard-network
+
+  # Health check service for blue environment
+  healthcheck-blue:
+    image: alpine/curl:latest
+    container_name: vessel-guard-healthcheck-blue
+    command: |
+      sh -c '
+        echo "Waiting for blue services to be ready..."
+        while ! curl -f http://vessel-guard-backend-blue:8000/api/v1/health; do
+          echo "Backend not ready, waiting..."
+          sleep 5
+        done
+        echo "Blue backend is healthy!"
+        
+        while ! curl -f http://vessel-guard-frontend-blue:3000; do
+          echo "Frontend not ready, waiting..."
+          sleep 5
+        done
+        echo "Blue frontend is healthy!"
+        echo "Blue environment is fully operational!"
+      '
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - vessel-guard-network
+
+networks:
+  vessel-guard-network:
+    external: true

@@ -52,6 +52,7 @@
     "@tailwindcss/typography": "^0.5.10",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.10.4",
     "@types/react": "^18.2.42",
@@ -61,11 +62,13 @@
     "eslint-config-next": "^14.0.4",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "msw": "^2.10.4",
     "postcss": "^8.5.6",
     "prettier": "^3.1.1",
     "prettier-plugin-tailwindcss": "^0.5.9",
     "tailwindcss": "^3.3.6",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "whatwg-fetch": "^3.6.20"
   },
   "engines": {
     "node": ">=18.0.0"

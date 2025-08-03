@@ -10,7 +10,7 @@ from .organization import organization, CRUDOrganization
 from .project import project, CRUDProject
 from .vessel import vessel, CRUDVessel
 from .material import material, CRUDMaterial
-from .calculation import calculation, CRUDCalculation
+from .calculation import calculation_crud, CRUDCalculation
 from .inspection import inspection, CRUDInspection
 from .report import report, CRUDReport
 
@@ -26,7 +26,7 @@ __all__ = [
     "CRUDVessel",
     "material",
     "CRUDMaterial",
-    "calculation",
+    "calculation_crud",
     "CRUDCalculation",
     "inspection",
     "CRUDInspection",

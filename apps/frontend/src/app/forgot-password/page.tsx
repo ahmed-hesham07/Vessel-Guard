@@ -21,8 +21,8 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
 
     try {
-      // TODO: Implement password reset API call
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/forgot-password`, {
+      // Request password reset using the correct endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/password-reset/request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -11,7 +11,7 @@ export interface User {
   phone?: string
   job_title?: string
   department?: string
-  role: 'admin' | 'manager' | 'engineer' | 'inspector' | 'viewer'
+  role: 'engineer' | 'consultant'
   is_active: boolean
   created_at: string
   updated_at: string
@@ -31,6 +31,7 @@ interface AuthContextType {
   register: (userData: RegisterData) => Promise<void>
   logout: () => void
   refreshToken: () => Promise<void>
+  checkAuth: () => Promise<void>
 }
 
 interface RegisterData {
@@ -176,6 +177,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('refresh_token', data.refresh_token)
   }
 
+  const checkAuth = async () => {
+    const savedToken = localStorage.getItem('token')
+    if (!savedToken) {
+      logout()
+      return
+    }
+
+    try {
+      await fetchUserProfile(savedToken)
+    } catch (error) {
+      // Try to refresh token if profile fetch fails
+      try {
+        await refreshToken()
+        const newToken = localStorage.getItem('token')
+        if (newToken) {
+          await fetchUserProfile(newToken)
+        }
+      } catch (refreshError) {
+        logout()
+        throw new Error('Authentication failed')
+      }
+    }
+  }
+
   const value: AuthContextType = {
     user,
     token,
@@ -185,6 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     logout,
     refreshToken,
+    checkAuth,
   }
 
   return (

@@ -106,7 +106,7 @@ def create_vessel(
     vessel_in: VesselCreate,
     project_id: int = Query(..., description="Project ID for the vessel"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Create new vessel.
@@ -440,7 +440,7 @@ def update_vessel(
     vessel_id: int,
     vessel_in: VesselUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Update vessel.
@@ -489,7 +489,7 @@ def update_vessel_inspection(
     vessel_id: int,
     inspection_in: VesselInspectionUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Update vessel inspection dates.
@@ -521,7 +521,7 @@ def update_vessel_inspection(
 def deactivate_vessel(
     vessel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Deactivate vessel (soft delete).

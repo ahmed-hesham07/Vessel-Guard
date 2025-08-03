@@ -47,14 +47,15 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
         limit: int = 100
     ) -> List[Report]:
         """Get reports by type for organization."""
+        from app.db.models.project import Project
+        
         return (
             db.query(self.model)
-            .join(self.model.vessel)
+            .join(Project, self.model.project_id == Project.id)
             .filter(
                 and_(
                     self.model.report_type == report_type,
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.is_active == True
+                    Project.organization_id == organization_id
                 )
             )
             .order_by(self.model.created_at.desc())
@@ -127,16 +128,18 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
         limit: int = 10
     ) -> List[Report]:
         """Get recent reports for organization."""
+        from app.db.models.project import Project
+        from datetime import timedelta
+        
         cutoff_date = datetime.utcnow() - timedelta(days=days)
         
         return (
             db.query(self.model)
-            .join(self.model.vessel)
+            .join(Project, self.model.project_id == Project.id)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.created_at >= cutoff_date,
-                    self.model.is_active == True
+                    Project.organization_id == organization_id,
+                    self.model.created_at >= cutoff_date
                 )
             )
             .order_by(self.model.created_at.desc())
@@ -153,14 +156,15 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
         limit: int = 100
     ) -> List[Report]:
         """Get reports that are still being generated."""
+        from app.db.models.project import Project
+        
         return (
             db.query(self.model)
-            .join(self.model.vessel)
+            .join(Project, self.model.project_id == Project.id)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.status == "generating",
-                    self.model.is_active == True
+                    Project.organization_id == organization_id,
+                    self.model.status == "generating"
                 )
             )
             .order_by(self.model.created_at.desc())
@@ -178,14 +182,15 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
         limit: int = 100
     ) -> List[Report]:
         """Get failed reports for organization."""
+        from app.db.models.project import Project
+        
         return (
             db.query(self.model)
-            .join(self.model.vessel)
+            .join(Project, self.model.project_id == Project.id)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.status == "failed",
-                    self.model.is_active == True
+                    Project.organization_id == organization_id,
+                    self.model.status == "failed"
                 )
             )
             .order_by(self.model.created_at.desc())
@@ -204,20 +209,21 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
         limit: int = 100
     ) -> List[Report]:
         """Search reports by name, description, or report type."""
+        from app.db.models.project import Project
+        
         search_term = f"%{query.lower()}%"
         
         return (
             db.query(self.model)
-            .join(self.model.vessel)
+            .join(Project, self.model.project_id == Project.id)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
+                    Project.organization_id == organization_id,
                     or_(
-                        func.lower(self.model.name).contains(search_term),
+                        func.lower(self.model.title).contains(search_term),
                         func.lower(self.model.description).contains(search_term),
                         func.lower(self.model.report_type).contains(search_term)
-                    ),
-                    self.model.is_active == True
+                    )
                 )
             )
             .order_by(self.model.created_at.desc())
@@ -230,15 +236,12 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
         self, db: Session, *, organization_id: int
     ) -> Dict[str, Any]:
         """Get report statistics for organization."""
+        from app.db.models.project import Project
+        
         base_query = (
             db.query(self.model)
-            .join(self.model.vessel)
-            .filter(
-                and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.is_active == True
-                )
-            )
+            .join(Project, self.model.project_id == Project.id)
+            .filter(Project.organization_id == organization_id)
         )
 
         total_reports = base_query.count()
@@ -273,10 +276,10 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
             base_query
             .filter(self.model.status == "completed")
             .with_entities(
-                self.model.format,
+                self.model.report_format,
                 func.count(self.model.id).label('count')
             )
-            .group_by(self.model.format)
+            .group_by(self.model.report_format)
             .all()
         )
         
@@ -294,10 +297,10 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
             .filter(
                 and_(
                     self.model.status == "completed",
-                    self.model.file_size.isnot(None)
+                    self.model.file_size_bytes.isnot(None)
                 )
             )
-            .with_entities(func.sum(self.model.file_size))
+            .with_entities(func.sum(self.model.file_size_bytes))
             .scalar() or 0
         )
 
@@ -334,7 +337,7 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
             if file_path:
                 update_data["file_path"] = file_path
             if file_size:
-                update_data["file_size"] = file_size
+                update_data["file_size_bytes"] = file_size
                 
             return self.update(db, db_obj=report, obj_in=update_data)
         return None
@@ -358,16 +361,29 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
         self, db: Session, *, organization_id: int
     ) -> int:
         """Get count of reports for organization."""
+        from app.db.models.project import Project
+        
         return (
             db.query(self.model)
-            .join(self.model.vessel)
-            .filter(
-                and_(
-                    self.model.vessel.has(organization_id=organization_id),
-                    self.model.is_active == True
-                )
-            )
+            .join(Project, self.model.project_id == Project.id)
+            .filter(Project.organization_id == organization_id)
             .count()
+        )
+
+    def get_by_organization(
+        self, db: Session, *, organization_id: int, skip: int = 0, limit: int = 100
+    ) -> List[Report]:
+        """Get reports for organization."""
+        from app.db.models.project import Project
+        
+        return (
+            db.query(self.model)
+            .join(Project, self.model.project_id == Project.id)
+            .filter(Project.organization_id == organization_id)
+            .order_by(self.model.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
         )
 
     def get_downloadable_reports(
@@ -379,15 +395,16 @@ class CRUDReport(CRUDBase[Report, ReportCreate, ReportUpdate]):
         limit: int = 100
     ) -> List[Report]:
         """Get completed reports that can be downloaded."""
+        from app.db.models.project import Project
+        
         return (
             db.query(self.model)
-            .join(self.model.vessel)
+            .join(Project, self.model.project_id == Project.id)
             .filter(
                 and_(
-                    self.model.vessel.has(organization_id=organization_id),
+                    Project.organization_id == organization_id,
                     self.model.status == "completed",
-                    self.model.file_path.isnot(None),
-                    self.model.is_active == True
+                    self.model.file_path.isnot(None)
                 )
             )
             .order_by(self.model.created_at.desc())

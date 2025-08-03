@@ -66,10 +66,25 @@ class ErrorTracker:
 def track_operation(operation_name: str, context: Dict[str, Any] = None):
     """Context manager for tracking operations."""
     tracker = ErrorTracker(operation_name, context)
+    start_time = time.time()
+    
     try:
         yield tracker
+    except Exception as e:
+        # Track the error before re-raising
+        tracker.track_error(e)
+        raise
     finally:
-        pass
+        # Log operation completion
+        duration = time.time() - start_time
+        logger.debug(f"Operation '{operation_name}' completed in {duration:.3f}s")
+        
+        # Clean up any temporary resources
+        if hasattr(tracker, '_cleanup'):
+            try:
+                tracker._cleanup()
+            except Exception as cleanup_error:
+                logger.warning(f"Cleanup failed for operation '{operation_name}': {cleanup_error}")
 
 
 def track_api_errors(operation_name: str = None):

@@ -13,6 +13,9 @@ from app.db.models.material import Material
 from app.db.models.calculation import Calculation, CalculationResult
 from app.db.models.inspection import Inspection
 from app.db.models.report import Report
+from app.db.models.ticket import Ticket
+from app.core.audit import AuditLog
+from app.core.session_manager import UserSession
 
 __all__ = [
     "User",
@@ -23,5 +26,8 @@ __all__ = [
     "Calculation",
     "CalculationResult",
     "Inspection",
-    "Report"
+    "Report",
+    "Ticket",
+    "AuditLog",
+    "UserSession"
 ]

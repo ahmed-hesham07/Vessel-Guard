@@ -11,61 +11,49 @@
     "dev:backend": "cd apps/backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
     "dev:frontend": "cd apps/frontend && npm run dev",
     "dev:full": "docker-compose -f docker-compose.dev.yml up --build",
-    
     "build": "npm run build:frontend && npm run build:backend",
     "build:backend": "cd apps/backend && python -m pip install -r requirements.txt",
     "build:frontend": "cd apps/frontend && npm run build",
     "build:docker": "docker-compose build",
-    
     "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "start:backend": "cd apps/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000",
     "start:frontend": "cd apps/frontend && npm start",
     "start:docker": "docker-compose up",
-    
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd apps/backend && python -m pytest tests/ -v --cov=app --cov-report=html",
     "test:frontend": "cd apps/frontend && npm run test",
     "test:e2e": "cd apps/frontend && npm run test:e2e",
     "test:watch": "concurrently \"npm run test:backend -- --watch\" \"npm run test:frontend -- --watch\"",
-    
     "lint": "npm run lint:backend && npm run lint:frontend",
     "lint:backend": "cd apps/backend && python -m flake8 app/ tests/ && python -m mypy app/",
     "lint:frontend": "cd apps/frontend && npm run lint",
     "lint:fix": "npm run lint:backend:fix && npm run lint:frontend:fix",
     "lint:backend:fix": "cd apps/backend && python -m black app/ tests/ && python -m isort app/ tests/",
     "lint:frontend:fix": "cd apps/frontend && npm run lint:fix",
-    
     "format": "npm run lint:fix",
     "type-check": "npm run type-check:backend && npm run type-check:frontend",
     "type-check:backend": "cd apps/backend && python -m mypy app/",
     "type-check:frontend": "cd apps/frontend && npm run type-check",
-    
     "clean": "npm run clean:backend && npm run clean:frontend",
     "clean:backend": "cd apps/backend && find . -type d -name __pycache__ -delete && find . -name '*.pyc' -delete",
     "clean:frontend": "cd apps/frontend && rm -rf .next dist",
-    
     "db:migrate": "cd apps/backend && python -m alembic upgrade head",
     "db:migrate:create": "cd apps/backend && python -m alembic revision --autogenerate -m",
     "db:migrate:down": "cd apps/backend && python -m alembic downgrade -1",
     "db:reset": "cd apps/backend && python -m alembic downgrade base && python -m alembic upgrade head",
     "db:seed": "cd apps/backend && python scripts/seed_db.py",
-    
     "security:check": "npm run security:backend && npm run security:frontend",
     "security:backend": "cd apps/backend && python -m safety check",
     "security:frontend": "cd apps/frontend && npm audit",
-    
     "logs:backend": "cd apps/backend && tail -f logs/vessel_guard.log",
     "logs:docker": "docker-compose logs -f",
-    
     "setup": "npm install && npm run setup:backend && npm run setup:frontend",
     "setup:backend": "cd apps/backend && python -m pip install -r requirements.txt",
     "setup:frontend": "cd apps/frontend && npm install",
-    
     "deploy": "npm run deploy:backend && npm run deploy:frontend",
     "deploy:backend": "cd apps/backend && echo 'Deploy to Azure Container Apps'",
     "deploy:frontend": "cd apps/frontend && vercel --prod",
     "deploy:azure": "azd up",
-    
     "health:check": "curl -f http://localhost:8000/api/v1/health || exit 1",
     "precommit": "npm run lint && npm run type-check && npm run test"
   },
@@ -95,5 +83,8 @@
     "monorepo"
   ],
   "author": "Ahmed Hesham",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@headlessui/react": "^2.2.6"
+  }
 }

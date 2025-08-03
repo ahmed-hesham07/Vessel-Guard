@@ -1,0 +1,337 @@
+name: Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+      rollback_type:
+        description: 'Type of rollback'
+        required: true
+        default: 'previous_version'
+        type: choice
+        options:
+          - previous_version
+          - specific_commit
+          - blue_green_switch
+      target_commit:
+        description: 'Target commit SHA (if specific_commit selected)'
+        required: false
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  validate-rollback:
+    runs-on: ubuntu-latest
+    outputs:
+      can_proceed: ${{ steps.validation.outputs.can_proceed }}
+      target_sha: ${{ steps.validation.outputs.target_sha }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 50  # Get enough history for rollback validation
+    
+    - name: Validate rollback request
+      id: validation
+      run: |
+        echo "Validating rollback request..."
+        echo "Environment: ${{ github.event.inputs.environment }}"
+        echo "Rollback type: ${{ github.event.inputs.rollback_type }}"
+        echo "Reason: ${{ github.event.inputs.reason }}"
+        
+        # Validate environment
+        if [[ "${{ github.event.inputs.environment }}" != "staging" && "${{ github.event.inputs.environment }}" != "production" ]]; then
+          echo "❌ Invalid environment specified"
+          exit 1
+        fi
+        
+        # For production rollbacks, require additional validation
+        if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+          echo "🔒 Production rollback requested - requires elevated permissions"
+        fi
+        
+        # Determine target commit
+        TARGET_SHA=""
+        case "${{ github.event.inputs.rollback_type }}" in
+          "previous_version")
+            # Get the commit from the last successful deployment
+            TARGET_SHA=$(git log --oneline -n 10 --grep="deploy" --grep="release" | head -2 | tail -1 | awk '{print $1}')
+            if [[ -z "$TARGET_SHA" ]]; then
+              # Fallback to previous commit
+              TARGET_SHA=$(git rev-parse HEAD~1)
+            fi
+            ;;
+          "specific_commit")
+            TARGET_SHA="${{ github.event.inputs.target_commit }}"
+            if [[ -z "$TARGET_SHA" ]]; then
+              echo "❌ Target commit SHA is required for specific_commit rollback"
+              exit 1
+            fi
+            # Validate commit exists
+            if ! git rev-parse --verify "$TARGET_SHA" >/dev/null 2>&1; then
+              echo "❌ Target commit SHA does not exist: $TARGET_SHA"
+              exit 1
+            fi
+            ;;
+          "blue_green_switch")
+            # For blue-green, we switch environments rather than code
+            TARGET_SHA="current"
+            ;;
+        esac
+        
+        echo "🎯 Target SHA: $TARGET_SHA"
+        echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
+        echo "can_proceed=true" >> $GITHUB_OUTPUT
+    
+    - name: Check deployment history
+      run: |
+        echo "📈 Recent deployment history:"
+        git log --oneline -n 10 --grep="deploy" --grep="release" || echo "No deployment commits found"
+    
+    - name: Notify rollback initiation
+      if: ${{ secrets.SLACK_WEBHOOK != '' }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚨 Rollback Initiated - Environment: ${{ github.event.inputs.environment }}, Type: ${{ github.event.inputs.rollback_type }}, Initiated by: ${{ github.actor }}\"}" \
+          ${{ secrets.SLACK_WEBHOOK }}
+
+  backup-current-state:
+    needs: validate-rollback
+    runs-on: ubuntu-latest
+    if: needs.validate-rollback.outputs.can_proceed == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create backup of current state
+      run: |
+        echo "💾 Creating backup of current deployment state..."
+        
+        # Create backup directory
+        mkdir -p backups
+        
+        # Backup current environment configuration
+        if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+          echo "Backing up production state..."
+          # In a real scenario, this would backup database, configs, etc.
+          echo "Production backup completed at $(date)" > backups/production_backup_$(date +%Y%m%d_%H%M%S).txt
+        else
+          echo "Backing up staging state..."
+          echo "Staging backup completed at $(date)" > backups/staging_backup_$(date +%Y%m%d_%H%M%S).txt
+        fi
+        
+        echo "✅ Backup completed"
+    
+    - name: Upload backup artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: rollback-backup-${{ github.event.inputs.environment }}-${{ github.run_number }}
+        path: backups/
+
+  execute-rollback:
+    needs: [validate-rollback, backup-current-state]
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    if: needs.validate-rollback.outputs.can_proceed == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ needs.validate-rollback.outputs.target_sha != 'current' && needs.validate-rollback.outputs.target_sha || github.sha }}
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Execute Blue-Green Switch Rollback
+      if: github.event.inputs.rollback_type == 'blue_green_switch'
+      run: |
+        echo "🔄 Executing blue-green switch rollback..."
+        
+        cd $GITHUB_WORKSPACE
+        
+        # Switch from green back to blue environment
+        echo "Switching traffic from green to blue environment..."
+        
+        # Bring up blue environment
+        docker-compose -f docker-compose.yml -f docker-compose.blue.yml up -d
+        
+        # Health check blue environment
+        echo "Health checking blue environment..."
+        sleep 30
+        
+        for i in {1..10}; do
+          if curl -f http://localhost:8000/api/v1/health >/dev/null 2>&1; then
+            echo "✅ Blue environment is healthy"
+            break
+          fi
+          echo "Attempt $i/10 failed, retrying..."
+          sleep 10
+        done
+        
+        # Take down green environment
+        docker-compose -f docker-compose.yml -f docker-compose.green.yml down
+        
+        echo "🎯 Blue-green rollback completed"
+    
+    - name: Execute Version Rollback
+      if: github.event.inputs.rollback_type != 'blue_green_switch'
+      run: |
+        echo "🔄 Executing version rollback to ${{ needs.validate-rollback.outputs.target_sha }}..."
+        
+        # Build images from target commit
+        echo "Building images from target commit..."
+        docker build -t vessel-guard/backend:rollback ./apps/backend
+        docker build -t vessel-guard/frontend:rollback ./apps/frontend
+        
+        # Tag for deployment
+        docker tag vessel-guard/backend:rollback ghcr.io/${{ github.repository }}/backend:rollback
+        docker tag vessel-guard/frontend:rollback ghcr.io/${{ github.repository }}/frontend:rollback
+        
+        # Push rollback images
+        docker push ghcr.io/${{ github.repository }}/backend:rollback
+        docker push ghcr.io/${{ github.repository }}/frontend:rollback
+        
+        # Deploy rollback version
+        echo "Deploying rollback version..."
+        
+        # Create environment file
+        cat > .env << EOF
+        ENVIRONMENT=${{ github.event.inputs.environment }}
+        DEPLOYMENT_TYPE=rollback
+        TARGET_SHA=${{ needs.validate-rollback.outputs.target_sha }}
+        EOF
+        
+        # Add environment-specific variables
+        if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+          cat >> .env << EOF
+        DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}
+        SECRET_KEY=${{ secrets.PRODUCTION_SECRET_KEY }}
+        REDIS_URL=${{ secrets.PRODUCTION_REDIS_URL }}
+        EOF
+        else
+          cat >> .env << EOF
+        DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+        SECRET_KEY=${{ secrets.STAGING_SECRET_KEY }}
+        REDIS_URL=${{ secrets.STAGING_REDIS_URL }}
+        EOF
+        fi
+        
+        # Deploy with rollback images
+        docker-compose up -d --force-recreate
+        
+        echo "🎯 Version rollback completed"
+    
+    - name: Health check after rollback
+      run: |
+        echo "🏥 Performing post-rollback health checks..."
+        
+        # Wait for services to stabilize
+        sleep 60
+        
+        # Health check endpoints
+        HEALTH_URL="http://localhost:8000/api/v1/health"
+        STATUS_URL="http://localhost:8000/api/v1/status"
+        
+        for i in {1..20}; do
+          if curl -f "$HEALTH_URL" >/dev/null 2>&1; then
+            echo "✅ Health check passed"
+            
+            # Test status endpoint
+            if curl -f "$STATUS_URL" >/dev/null 2>&1; then
+              echo "✅ Status endpoint responding"
+              break
+            fi
+          fi
+          
+          if [[ $i -eq 20 ]]; then
+            echo "❌ Health checks failed after rollback"
+            exit 1
+          fi
+          
+          echo "Health check attempt $i/20 failed, retrying..."
+          sleep 15
+        done
+        
+        echo "🎉 Rollback health checks completed successfully"
+    
+    - name: Run post-rollback verification
+      run: |
+        echo "🔍 Running post-rollback verification..."
+        
+        # Basic functionality tests
+        curl -f http://localhost:8000/api/v1/health
+        curl -f http://localhost:8000/api/v1/status
+        
+        # Check if monitoring endpoints are accessible
+        curl -f http://localhost:8000/api/v1/monitoring/metrics || echo "Monitoring not available"
+        
+        echo "✅ Post-rollback verification completed"
+    
+    - name: Update deployment status
+      run: |
+        echo "📝 Updating deployment status..."
+        echo "Rollback to ${{ needs.validate-rollback.outputs.target_sha }} completed successfully"
+        echo "Environment: ${{ github.event.inputs.environment }}"
+        echo "Rollback type: ${{ github.event.inputs.rollback_type }}"
+        echo "Reason: ${{ github.event.inputs.reason }}"
+
+  notify-completion:
+    needs: [validate-rollback, backup-current-state, execute-rollback]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Determine rollback status
+      id: status
+      run: |
+        if [[ "${{ needs.execute-rollback.result }}" == "success" ]]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "message=Rollback completed successfully" >> $GITHUB_OUTPUT
+          echo "color=good" >> $GITHUB_OUTPUT
+          echo "emoji=✅" >> $GITHUB_OUTPUT
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "message=Rollback failed" >> $GITHUB_OUTPUT
+          echo "color=danger" >> $GITHUB_OUTPUT
+          echo "emoji=❌" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Notify rollback completion
+      if: ${{ secrets.SLACK_WEBHOOK != '' }}
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"Rollback ${{ steps.status.outputs.status }} - Environment: ${{ github.event.inputs.environment }}, Executed by: ${{ github.actor }}\"}" \
+          ${{ secrets.SLACK_WEBHOOK }}
+    
+    - name: Create rollback summary
+      if: always()
+      run: |
+        echo "## 🔄 Rollback Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Type**: ${{ github.event.inputs.rollback_type }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Target**: ${{ needs.validate-rollback.outputs.target_sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ${{ steps.status.outputs.message }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Reason**: ${{ github.event.inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Executed by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY

@@ -14,12 +14,22 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
-from app.db.connection import db_manager
+from app.db.connection import create_database_engine, test_database_connection
 
 logger = logging.getLogger(__name__)
 
-# Use the connection manager's engine
-engine = db_manager.get_engine()
+# SQLAlchemy engine configuration
+if settings.TESTING:
+    # Use SQLite for testing
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+else:
+    # Use PostgreSQL for production/development with SSL support
+    engine = create_database_engine()
 
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -38,6 +48,14 @@ metadata = MetaData(naming_convention=convention)
 # Base class for all models
 Base = declarative_base(metadata=metadata)
 
+# Import all models to register them with SQLAlchemy
+# This must come after Base is defined to avoid circular imports
+try:
+    from app.db.models import *  # noqa: F401,F403
+except ImportError as e:
+    logger.warning(f"Could not import all models: {e}")
+    # This is acceptable during initial setup
+
 
 def get_db() -> Generator[Session, None, None]:
     """
@@ -50,7 +68,7 @@ def get_db() -> Generator[Session, None, None]:
     try:
         yield db
     except Exception as e:
-        logger.error(f"Database session error: {e}")
+        logger.error(f"Database session error: {str(e)}", exc_info=True)
         db.rollback()
         raise
     finally:
@@ -78,4 +96,4 @@ def test_db_connection() -> bool:
     Returns:
         True if connection successful, False otherwise
     """
-    return db_manager.test_connection()
+    return test_database_connection(engine)

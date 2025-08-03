@@ -1,34 +1,22 @@
 """
-Inspection API endpoints.
-
-Handles vessel inspection tracking including scheduling,
-results recording, and compliance management.
+Inspection endpoints for vessel inspection tracking.
 """
 
+from datetime import datetime, timedelta
 from typing import List, Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+from fastapi.background import BackgroundTasks
 
-from app.api.dependencies import (
-    get_current_user,
-    get_db,
-    require_role,
-    get_pagination_params
-)
+from app.api.dependencies import get_db, get_current_user, require_role
 from app.crud import inspection as inspection_crud
-from app.db.models.user import User
-from app.schemas import (
-    Inspection,
-    InspectionCreate,
-    InspectionUpdate,
-    InspectionList,
-    InspectionSummary,
-    InspectionStatistics,
-    InspectionDashboard,
-    InspectionSchedule,
-    InspectionCalendarEvent
+from app.schemas.inspection import (
+    Inspection, InspectionCreate, InspectionUpdate, InspectionList,
+    InspectionSummary, InspectionDashboard, InspectionStatistics,
+    InspectionSchedule, InspectionCalendarEvent
 )
+from app.db.models.user import User
+import os
 
 router = APIRouter()
 
@@ -121,7 +109,7 @@ def get_inspections(
 def create_inspection(
     inspection_in: InspectionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "consultant"]))
 ):
     """
     Create new inspection.
@@ -471,8 +459,9 @@ def get_inspection(
 def update_inspection(
     inspection_id: int,
     inspection_in: InspectionUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "consultant"]))
 ):
     """
     Update inspection.
@@ -502,9 +491,18 @@ def update_inspection(
             detail="Not enough permissions to update this inspection"
         )
     
+    # Check if status is being changed to completed
+    status_changed_to_completed = False
+    if inspection_in.status and inspection_in.status == "completed" and inspection.status != "completed":
+        status_changed_to_completed = True
+    
     # Update inspection
     update_data = inspection_in.dict(exclude_unset=True)
     update_data["updated_by_id"] = current_user.id
+    
+    # Set completion date if status is being changed to completed
+    if status_changed_to_completed:
+        update_data["actual_completion_date"] = datetime.utcnow()
     
     inspection = inspection_crud.update(db, db_obj=inspection, obj_in=update_data)
     
@@ -514,10 +512,71 @@ def update_inspection(
     )
     if latest_inspection and latest_inspection.id == inspection.id:
         vessel_update = {
-            "last_inspection_date": inspection.inspection_date,
-            "next_inspection_date": inspection.next_inspection_date
+            "last_inspection_date": inspection.scheduled_date,
+            "next_inspection_date": inspection.recommended_next_inspection
         }
         vessel_crud.update(db, db_obj=vessel, obj_in=vessel_update)
+    
+    # Automatically generate technical professional formal report when inspection is completed
+    if status_changed_to_completed:
+        try:
+            from app.services.report_service import ReportService
+            report_service = ReportService(db)
+            
+            # Generate the inspection report
+            report_path = report_service.generate_inspection_report(inspection.id, current_user.id)
+            
+            # Create a report record in the database
+            from app.crud import report as report_crud
+            from app.schemas.report import ReportCreate
+            
+            report_data = ReportCreate(
+                name=f"Technical Inspection Report - {inspection.inspection_type.value if hasattr(inspection.inspection_type, 'value') else inspection.inspection_type}",
+                description=f"Automatically generated technical professional formal report for inspection {inspection.inspection_number or inspection.id}",
+                report_type="inspection",
+                format="pdf",
+                vessel_id=inspection.vessel_id,
+                inspection_id=inspection.id,
+                template_id=None,
+                parameters={
+                    "inspection_id": inspection.id,
+                    "generated_by": current_user.id,
+                    "generation_reason": "automatic_completion"
+                }
+            )
+            
+            report = report_crud.create(db, obj_in=report_data.dict())
+            
+            # Update the report with the file path
+            report_crud.update_status(
+                db,
+                report_id=report.id,
+                status="completed",
+                file_path=report_path,
+                file_size=os.path.getsize(report_path) if os.path.exists(report_path) else 0
+            )
+            
+            # Update inspection with report path
+            inspection_crud.update(
+                db,
+                db_obj=inspection,
+                obj_in={"report_path": report_path}
+            )
+            
+            # Send notification email in background
+            background_tasks.add_task(
+                send_inspection_report_notification,
+                inspection.id,
+                report.id,
+                current_user.id,
+                db
+            )
+            
+        except Exception as e:
+            # Log the error but don't fail the inspection update
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to generate automatic report for inspection {inspection.id}: {str(e)}")
     
     return inspection
 
@@ -528,7 +587,7 @@ def schedule_next_inspection(
     next_inspection_date: str = Query(..., description="Next inspection date (YYYY-MM-DD)"),
     interval_months: Optional[int] = Query(None, ge=1, le=120, description="Inspection interval in months"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "consultant"]))
 ):
     """
     Schedule next inspection date.
@@ -588,7 +647,7 @@ def schedule_next_inspection(
 def deactivate_inspection(
     inspection_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer"]))
 ):
     """
     Deactivate inspection (soft delete).
@@ -632,3 +691,56 @@ def get_available_inspection_types():
         "liquid_penetrant", "eddy_current", "pressure_test", 
         "leak_test", "thickness_measurement", "regulatory", "other"
     ]
+
+
+# Background task for sending inspection report notifications
+def send_inspection_report_notification(
+    inspection_id: int,
+    report_id: int,
+    user_id: int,
+    db: Session
+):
+    """
+    Send notification email when inspection report is generated.
+    """
+    try:
+        from app.services.email_service import EmailService
+        from app.crud import user as user_crud
+        from app.crud import inspection as inspection_crud
+        from app.crud import report as report_crud
+        
+        # Get inspection and report details
+        inspection = inspection_crud.get(db, id=inspection_id)
+        report = report_crud.get(db, id=report_id)
+        user = user_crud.get(db, id=user_id)
+        
+        if not inspection or not report or not user:
+            return
+        
+        # Get vessel information
+        from app.crud import vessel as vessel_crud
+        vessel = vessel_crud.get(db, id=inspection.vessel_id)
+        
+        # Prepare email data
+        email_data = {
+            "inspection_number": inspection.inspection_number or f"INSP-{inspection.id}",
+            "inspection_type": inspection.inspection_type.value if hasattr(inspection.inspection_type, 'value') else inspection.inspection_type,
+            "vessel_tag": vessel.tag_number if vessel else "N/A",
+            "vessel_name": vessel.name if vessel else "N/A",
+            "inspector_name": user.full_name,
+            "report_title": report.name,
+            "report_download_url": f"/api/v1/reports/{report.id}/download",
+            "generated_at": datetime.now().strftime("%B %d, %Y at %I:%M %p")
+        }
+        
+        # Send notification email
+        email_service = EmailService()
+        email_service.send_inspection_report_notification(
+            recipients=[{"email": user.email, "name": user.full_name}],
+            inspection_data=email_data
+        )
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to send inspection report notification: {str(e)}")

@@ -1,0 +1,435 @@
+"use client"
+
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Separator } from '@/components/ui/separator'
+import { 
+  ArrowLeft, 
+  FileText, 
+  Download, 
+  Calendar, 
+  User, 
+  AlertTriangle, 
+  CheckCircle,
+  Clock,
+  Eye,
+  Edit
+} from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { apiService } from '@/lib/api'
+
+interface Inspection {
+  id: number
+  inspection_number: string
+  inspection_type: string
+  scheduled_date: string
+  actual_start_date: string | null
+  actual_completion_date: string | null
+  status: string
+  overall_result: string | null
+  inspector_name: string
+  findings: string | null
+  recommendations: string | null
+  vessel_id: number
+  vessel_tag_number: string
+  vessel_name: string
+  report_path: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface Report {
+  id: number
+  name: string
+  description: string
+  report_type: string
+  status: string
+  file_path: string | null
+  generated_at: string | null
+  created_at: string
+}
+
+export default function InspectionDetailPage() {
+  const { id } = useParams()
+  const { token } = useAuth()
+  const router = useRouter()
+  const [inspection, setInspection] = useState<Inspection | null>(null)
+  const [reports, setReports] = useState<Report[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+
+  useEffect(() => {
+    if (token && id) {
+      fetchInspection()
+      fetchReports()
+    }
+  }, [token, id])
+
+  const fetchInspection = async () => {
+    try {
+      const data = await apiService.getInspection(parseInt(id as string), token!)
+      setInspection(data)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to fetch inspection')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchReports = async () => {
+    try {
+      const data = await apiService.getReports(token!, { inspection_id: parseInt(id as string) })
+      setReports(data.items || [])
+    } catch (error) {
+      console.error('Failed to fetch reports:', error)
+    }
+  }
+
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (!inspection) return
+
+    setIsUpdatingStatus(true)
+    try {
+      const updatedInspection = await apiService.updateInspection(
+        inspection.id,
+        { status: newStatus },
+        token!
+      )
+      setInspection(updatedInspection)
+      
+      // If status is being changed to completed, show success message
+      if (newStatus === 'completed' && inspection.status !== 'completed') {
+        // The backend will automatically generate a report
+        setTimeout(() => {
+          fetchReports() // Refresh reports to show the new one
+        }, 2000)
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update inspection status')
+    } finally {
+      setIsUpdatingStatus(false)
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      scheduled: 'bg-blue-100 text-blue-800',
+      in_progress: 'bg-yellow-100 text-yellow-800',
+      completed: 'bg-green-100 text-green-800',
+      cancelled: 'bg-red-100 text-red-800',
+      overdue: 'bg-orange-100 text-orange-800'
+    }
+    return variants[status as keyof typeof variants] || 'bg-gray-100 text-gray-800'
+  }
+
+  const getResultBadge = (result: string) => {
+    const variants = {
+      satisfactory: 'bg-green-100 text-green-800',
+      acceptable_with_conditions: 'bg-yellow-100 text-yellow-800',
+      requires_repair: 'bg-orange-100 text-orange-800',
+      requires_replacement: 'bg-red-100 text-red-800',
+      unsafe_for_operation: 'bg-red-100 text-red-800'
+    }
+    return variants[result as keyof typeof variants] || 'bg-gray-100 text-gray-800'
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  if (!inspection) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>Inspection not found</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  const autoGeneratedReport = reports.find(r => 
+    r.report_type === 'inspection' && 
+    r.description?.includes('Automatically generated')
+  )
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Link href="/dashboard/inspections">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Inspection Details</h1>
+            <p className="text-muted-foreground">
+              {inspection.inspection_number || `Inspection #${inspection.id}`}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge className={getStatusBadge(inspection.status)}>
+            {inspection.status.replace('_', ' ').toUpperCase()}
+          </Badge>
+          {inspection.overall_result && (
+            <Badge className={getResultBadge(inspection.overall_result)}>
+              {inspection.overall_result.replace('_', ' ').toUpperCase()}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Automatic Report Generation Alert */}
+      {inspection.status === 'completed' && autoGeneratedReport && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            <strong>Technical Professional Formal Report Generated!</strong><br />
+            A comprehensive technical report has been automatically generated upon inspection completion. 
+            The report includes detailed findings, analysis, recommendations, and compliance assessments.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Status Update Section */}
+      {inspection.status !== 'completed' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5" />
+              <span>Update Inspection Status</span>
+            </CardTitle>
+            <CardDescription>
+              Mark the inspection as completed to automatically generate a technical professional formal report.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={() => handleStatusUpdate('completed')}
+                disabled={isUpdatingStatus}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Mark as Completed
+              </Button>
+              {inspection.status === 'scheduled' && (
+                <Button
+                  onClick={() => handleStatusUpdate('in_progress')}
+                  disabled={isUpdatingStatus}
+                  variant="outline"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Start Inspection
+                </Button>
+              )}
+            </div>
+            {inspection.status === 'scheduled' && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Completing the inspection will automatically generate a comprehensive technical report with all findings and recommendations.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Inspection Details */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5" />
+              <span>Inspection Information</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Inspection Type</label>
+              <p className="text-sm">{inspection.inspection_type}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Scheduled Date</label>
+              <p className="text-sm">{new Date(inspection.scheduled_date).toLocaleDateString()}</p>
+            </div>
+            {inspection.actual_start_date && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Start Date</label>
+                <p className="text-sm">{new Date(inspection.actual_start_date).toLocaleDateString()}</p>
+              </div>
+            )}
+            {inspection.actual_completion_date && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Completion Date</label>
+                <p className="text-sm">{new Date(inspection.actual_completion_date).toLocaleDateString()}</p>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Inspector</label>
+              <p className="text-sm">{inspection.inspector_name}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <User className="h-5 w-5" />
+              <span>Vessel Information</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Vessel Tag</label>
+              <p className="text-sm">{inspection.vessel_tag_number}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Vessel Name</label>
+              <p className="text-sm">{inspection.vessel_name}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Created</label>
+              <p className="text-sm">{new Date(inspection.created_at).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+              <p className="text-sm">{new Date(inspection.updated_at).toLocaleDateString()}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Findings and Recommendations */}
+      {(inspection.findings || inspection.recommendations) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Findings & Recommendations</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {inspection.findings && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Findings</label>
+                <p className="text-sm mt-1">{inspection.findings}</p>
+              </div>
+            )}
+            {inspection.recommendations && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Recommendations</label>
+                <p className="text-sm mt-1">{inspection.recommendations}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Generated Reports */}
+      {reports.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <FileText className="h-5 w-5" />
+              <span>Generated Reports</span>
+            </CardTitle>
+            <CardDescription>
+              Technical professional formal reports generated for this inspection.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {reports.map((report) => (
+                <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <h4 className="font-medium">{report.name}</h4>
+                    <p className="text-sm text-muted-foreground">{report.description}</p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <Badge variant="outline">{report.report_type}</Badge>
+                      <Badge className={report.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                        {report.status}
+                      </Badge>
+                      {report.generated_at && (
+                        <span className="text-xs text-muted-foreground">
+                          Generated: {new Date(report.generated_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {report.status === 'completed' && report.file_path && (
+                      <Button size="sm" variant="outline">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline">
+                      <Eye className="mr-2 h-4 w-4" />
+                      View
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Report Generation Info */}
+      {inspection.status === 'completed' && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-blue-800">
+              <FileText className="h-5 w-5" />
+              <span>Automatic Report Generation</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-blue-700">
+              <p className="text-sm">
+                <strong>✅ Technical Professional Formal Report Generated</strong>
+              </p>
+              <p className="text-sm">
+                Upon completion of this inspection, a comprehensive technical report was automatically generated including:
+              </p>
+              <ul className="text-sm list-disc list-inside space-y-1 ml-4">
+                <li>Executive Summary with key findings</li>
+                <li>Detailed inspection methodology and procedures</li>
+                <li>Comprehensive findings analysis and defect documentation</li>
+                <li>Technical measurements and engineering data</li>
+                <li>Engineering recommendations and action items</li>
+                <li>Compliance assessment and regulatory verification</li>
+                <li>Next inspection scheduling and planning</li>
+                <li>Professional formatting with digital signatures</li>
+              </ul>
+              <p className="text-sm mt-2">
+                The report is available for download above and has been automatically sent to the inspector via email.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+} 

@@ -109,7 +109,7 @@ def get_materials(
 def create_material(
     material_in: MaterialCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Create new material.
@@ -419,7 +419,7 @@ def update_material(
     material_id: int,
     material_in: MaterialUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Update material.
@@ -474,7 +474,7 @@ def update_material(
 def deactivate_material(
     material_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Deactivate material (soft delete).
@@ -511,7 +511,7 @@ def deactivate_material(
 @router.post("/seed-standard", response_model=dict)
 def seed_standard_materials(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Seed database with standard ASME materials.

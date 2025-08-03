@@ -27,7 +27,15 @@ class CalculationType(str, enum.Enum):
     API_579 = "API_579"  # Fitness for service
     ASME_VIII_DIV_1 = "ASME_VIII_DIV_1"  # Pressure vessel design
     ASME_VIII_DIV_2 = "ASME_VIII_DIV_2"  # Pressure vessel alternative rules
+    EN_13445 = "EN_13445"  # European pressure vessel standard
     API_650 = "API_650"  # Storage tank design
+    API_579_GENERAL_METAL_LOSS = "API_579_GENERAL_METAL_LOSS"  # API 579 general metal loss
+    API_579_LOCAL_METAL_LOSS = "API_579_LOCAL_METAL_LOSS"  # API 579 local metal loss
+    API_579_PITTING_DAMAGE = "API_579_PITTING_DAMAGE"  # API 579 pitting damage
+    ASME_VIII_DIV_2_FATIGUE = "ASME_VIII_DIV_2_FATIGUE"  # ASME VIII Div 2 fatigue analysis
+    EN_13445_CYLINDRICAL = "EN_13445_CYLINDRICAL"  # EN 13445 cylindrical shell
+    EN_13445_SPHERICAL = "EN_13445_SPHERICAL"  # EN 13445 spherical shell
+    EN_13445_HEAD = "EN_13445_HEAD"  # EN 13445 head calculations
     CUSTOM = "CUSTOM"  # Custom calculation
 
 

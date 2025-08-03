@@ -21,10 +21,15 @@ class CalculationBase(BaseModel):
     @validator('calculation_type')
     def validate_calculation_type(cls, v):
         """Validate calculation type."""
+        # Accept both generic types and design codes
         allowed_types = [
+            # Generic calculation types
             "pressure_vessel", "stress_analysis", "fatigue_analysis",
             "thermal_stress", "nozzle_reinforcement", "flange_design",
-            "support_design", "seismic_analysis", "wind_load", "other"
+            "support_design", "seismic_analysis", "wind_load", "other",
+            # Design codes supported by ValidationService
+            "ASME_VIII_DIV_1", "ASME_VIII_DIV_2", "ASME_B31_3", 
+            "API_579", "EN_13445"
         ]
         if v not in allowed_types:
             raise ValueError(f"Calculation type must be one of: {', '.join(allowed_types)}")
@@ -64,6 +69,27 @@ class CalculationUpdate(BaseModel):
             if v not in allowed_statuses:
                 raise ValueError(f"Status must be one of: {', '.join(allowed_statuses)}")
         return v
+
+
+# Calculation response schema
+class CalculationResponse(CalculationBase):
+    """Full calculation schema for responses."""
+    id: int
+    vessel_id: int
+    output_parameters: Optional[Dict[str, Any]] = None
+    status: str = Field(default="pending")
+    error_message: Optional[str] = None
+    created_by_id: int
+    reviewed_by_id: Optional[int] = None
+    reviewed_at: Optional[datetime] = None
+    review_notes: Optional[str] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool
+
+    class Config:
+        from_attributes = True
 
 
 # Calculation response schema
@@ -110,6 +136,16 @@ class CalculationWithVessel(Calculation):
 
 
 # Calculation list schema
+class CalculationListResponse(BaseModel):
+    """Schema for paginated calculation lists."""
+    items: List[CalculationResponse]
+    total: int = Field(..., ge=0)
+    page: int = Field(..., ge=1)
+    per_page: int = Field(..., ge=1)
+    pages: int = Field(..., ge=0)
+
+
+# Calculation list schema
 class CalculationList(BaseModel):
     """Schema for paginated calculation lists."""
     items: List[Calculation]
@@ -138,6 +174,16 @@ class CalculationDashboard(BaseModel):
     failed_calculations: List[CalculationSummary]
     calculations_needing_review: List[CalculationSummary]
     statistics: CalculationStatistics
+
+
+# Calculation result response schema
+class CalculationResultResponse(BaseModel):
+    """Schema for calculation results."""
+    calculation_id: int
+    status: str
+    output_parameters: Dict[str, Any]
+    error_message: Optional[str] = None
+    completed_at: datetime
 
 
 # Calculation result schema
@@ -204,6 +250,28 @@ class StressAnalysisParameters(BaseModel):
             if load not in v:
                 raise ValueError(f"Missing required load: {load}")
         return v
+
+
+# Bulk operations
+class CalculationBulkCreate(BaseModel):
+    """Schema for bulk creating calculations."""
+    calculations: List[CalculationCreate] = Field(..., min_items=1, max_items=100)
+    
+    @validator('calculations')
+    def validate_calculations(cls, v):
+        """Validate calculation list."""
+        if len(v) == 0:
+            raise ValueError("At least one calculation is required")
+        return v
+
+
+class CalculationBulkResponse(BaseModel):
+    """Schema for bulk operation responses."""
+    successful: List[CalculationResponse] = Field(default_factory=list)
+    failed: List[Dict[str, Any]] = Field(default_factory=list)
+    total_requested: int = Field(..., ge=0)
+    total_successful: int = Field(..., ge=0)
+    total_failed: int = Field(..., ge=0)
 
 
 # Calculation template schema

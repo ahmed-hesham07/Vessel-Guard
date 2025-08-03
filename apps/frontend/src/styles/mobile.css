@@ -1,0 +1,348 @@
+/* Mobile-First Responsive Design Utilities */
+
+/* Touch-Friendly Interactive Elements */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+}
+
+.touch-button {
+  @apply touch-target px-4 py-3 rounded-lg font-medium transition-all duration-200;
+}
+
+.touch-icon-button {
+  @apply touch-target p-3 rounded-full transition-all duration-200;
+}
+
+/* Mobile Typography Scale */
+.mobile-heading-1 {
+  @apply text-xl sm:text-2xl md:text-3xl font-bold;
+}
+
+.mobile-heading-2 {
+  @apply text-lg sm:text-xl md:text-2xl font-semibold;
+}
+
+.mobile-heading-3 {
+  @apply text-base sm:text-lg md:text-xl font-medium;
+}
+
+.mobile-body {
+  @apply text-sm sm:text-base leading-relaxed;
+}
+
+.mobile-caption {
+  @apply text-xs sm:text-sm;
+}
+
+/* Mobile-Optimized Spacing */
+.mobile-spacing-xs {
+  @apply space-y-2 sm:space-y-3;
+}
+
+.mobile-spacing-sm {
+  @apply space-y-3 sm:space-y-4;
+}
+
+.mobile-spacing-md {
+  @apply space-y-4 sm:space-y-6;
+}
+
+.mobile-spacing-lg {
+  @apply space-y-6 sm:space-y-8;
+}
+
+/* Mobile Container Utilities */
+.mobile-container {
+  @apply px-4 sm:px-6 lg:px-8;
+}
+
+.mobile-card {
+  @apply p-4 sm:p-6 rounded-xl border;
+}
+
+.mobile-section {
+  @apply py-6 sm:py-8 lg:py-12;
+}
+
+/* Responsive Grid Utilities */
+.mobile-grid-1 {
+  @apply grid grid-cols-1 gap-4;
+}
+
+.mobile-grid-2 {
+  @apply grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6;
+}
+
+.mobile-grid-3 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+}
+
+.mobile-grid-4 {
+  @apply grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4;
+}
+
+/* Mobile Navigation Utilities */
+.mobile-nav-item {
+  @apply flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200;
+}
+
+.mobile-tab-bar {
+  @apply flex justify-around items-center py-2 border-t;
+}
+
+.mobile-tab-item {
+  @apply flex flex-col items-center space-y-1 px-3 py-2 touch-target;
+}
+
+/* Mobile Form Utilities */
+.mobile-form-group {
+  @apply space-y-2;
+}
+
+.mobile-input {
+  @apply w-full px-4 py-3 text-base rounded-lg border focus:ring-2 focus:ring-offset-2;
+}
+
+.mobile-textarea {
+  @apply w-full px-4 py-3 text-base rounded-lg border focus:ring-2 focus:ring-offset-2 min-h-[120px];
+}
+
+.mobile-select {
+  @apply w-full px-4 py-3 text-base rounded-lg border focus:ring-2 focus:ring-offset-2;
+}
+
+/* Mobile Modal and Overlay */
+.mobile-modal {
+  @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center;
+}
+
+.mobile-modal-content {
+  @apply w-full max-w-lg mx-4 sm:mx-auto bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto;
+}
+
+.mobile-modal-header {
+  @apply sticky top-0 bg-white border-b px-6 py-4 rounded-t-2xl sm:rounded-t-2xl;
+}
+
+.mobile-modal-body {
+  @apply px-6 py-4;
+}
+
+.mobile-modal-footer {
+  @apply sticky bottom-0 bg-white border-t px-6 py-4 rounded-b-2xl sm:rounded-b-2xl;
+}
+
+/* Mobile Loading States */
+.mobile-skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+.mobile-skeleton-text {
+  @apply mobile-skeleton h-4 w-3/4;
+}
+
+.mobile-skeleton-title {
+  @apply mobile-skeleton h-6 w-1/2;
+}
+
+.mobile-skeleton-button {
+  @apply mobile-skeleton h-10 w-24;
+}
+
+.mobile-skeleton-card {
+  @apply mobile-skeleton h-32 w-full;
+}
+
+/* Mobile Performance Optimizations */
+.mobile-image {
+  @apply w-full h-auto object-cover;
+}
+
+.mobile-image-lazy {
+  @apply mobile-image opacity-0 transition-opacity duration-300;
+}
+
+.mobile-image-loaded {
+  @apply opacity-100;
+}
+
+/* Mobile Gesture Support */
+.mobile-swipeable {
+  @apply overflow-x-auto scrollbar-hide;
+}
+
+.mobile-scroll-snap {
+  @apply scroll-smooth snap-x snap-mandatory;
+}
+
+.mobile-scroll-item {
+  @apply snap-center flex-shrink-0;
+}
+
+/* Mobile-Specific Dark Theme */
+@media (prefers-color-scheme: dark) {
+  .mobile-card {
+    @apply bg-slate-800/60 border-slate-700/50;
+  }
+  
+  .mobile-input {
+    @apply bg-slate-800/60 border-slate-700/50 text-slate-100;
+  }
+  
+  .mobile-modal-content {
+    @apply bg-slate-900;
+  }
+  
+  .mobile-modal-header,
+  .mobile-modal-footer {
+    @apply bg-slate-900 border-slate-700/50;
+  }
+}
+
+/* Mobile Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-swipeable {
+    @apply scroll-auto;
+  }
+  
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile Focus States */
+.mobile-focus {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Mobile Safe Areas (iOS) */
+.mobile-safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.mobile-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-safe-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.mobile-safe-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Responsive Utilities for Engineering Content */
+.mobile-engineering-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6;
+}
+
+.mobile-calculation-card {
+  @apply mobile-card bg-gradient-to-br from-slate-800/60 to-slate-900/60 border-slate-700/50;
+}
+
+.mobile-vessel-item {
+  @apply mobile-card hover:border-cyan-500/30 transition-all duration-300 cursor-pointer;
+}
+
+.mobile-status-badge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+}
+
+/* Mobile Data Tables */
+.mobile-table-container {
+  @apply overflow-x-auto -mx-4 sm:mx-0;
+}
+
+.mobile-table {
+  @apply min-w-full text-sm;
+}
+
+.mobile-table-cell {
+  @apply px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap;
+}
+
+/* Hide scrollbars on mobile when needed */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile Optimization for Engineering Charts */
+.mobile-chart-container {
+  @apply w-full overflow-x-auto;
+}
+
+.mobile-chart {
+  @apply min-w-[300px] h-64 sm:h-80;
+}
+
+/* Mobile-First Button Variants */
+.mobile-button-primary {
+  @apply touch-button bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 mobile-focus;
+}
+
+.mobile-button-secondary {
+  @apply touch-button bg-slate-800/60 text-slate-100 border border-slate-700/50 hover:bg-slate-700/60 mobile-focus;
+}
+
+.mobile-button-ghost {
+  @apply touch-button text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 mobile-focus;
+}
+
+/* Mobile Progress Indicators */
+.mobile-progress-bar {
+  @apply w-full h-2 bg-slate-700 rounded-full overflow-hidden;
+}
+
+.mobile-progress-fill {
+  @apply h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500 ease-out;
+}
+
+/* Mobile Enhancement for Engineering Icons */
+.mobile-engineering-icon {
+  @apply w-5 h-5 sm:w-6 sm:h-6;
+}
+
+.mobile-status-icon {
+  @apply w-4 h-4 sm:w-5 sm:h-5;
+}
+
+/* Mobile-optimized animations */
+@media (max-width: 768px) {
+  .mobile-animate-in {
+    animation: mobileSlideIn 0.3s ease-out;
+  }
+  
+  .mobile-animate-out {
+    animation: mobileSlideOut 0.3s ease-in;
+  }
+}
+
+@keyframes mobileSlideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes mobileSlideOut {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}

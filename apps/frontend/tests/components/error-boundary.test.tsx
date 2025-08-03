@@ -10,6 +10,7 @@ jest.mock('@/contexts/auth-context', () => ({
     isAuthenticated: true,
     logout: jest.fn(),
   }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 // Mock Next.js router

@@ -174,13 +174,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         self.threat_detector = ThreatDetector()
         self.logger = get_logger('vessel_guard.security.middleware')
         
-        # Compile regex patterns for performance
+        # Initialize configuration based on environment
+        self._configure_for_environment()
+        
+        # Compile regex patterns for performance (after environment config)
         self.blocked_user_agent_patterns = [
             re.compile(pattern) for pattern in self.config.blocked_user_agents
         ]
-        
-        # Initialize configuration based on environment
-        self._configure_for_environment()
     
     def _configure_for_environment(self):
         """Configure security settings based on environment."""
@@ -193,10 +193,25 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             self.config.csp_policy = "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https:; frame-ancestors 'none';"
             self.config.allowed_origins = getattr(settings, 'ALLOWED_ORIGINS', ['https://vesselguard.com'])
         else:
-            # Development settings
+            # Development settings - more permissive
             self.config.enable_hsts = False
             self.config.csp_policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: http: https:;"
             self.config.allowed_origins = ['*']
+            
+            # Allow development tools and testing frameworks
+            self.config.blocked_user_agents = [
+                r'(?i)bot',
+                r'(?i)crawler',
+                r'(?i)spider', 
+                r'(?i)scraper',
+                r'(?i)masscan',
+                r'(?i)nmap',
+                r'(?i)nikto'
+                # Note: removed curl, wget, and python-requests for development
+            ]
+            
+            # Disable threat detection in development for easier testing
+            self.config.enable_threat_detection = False
     
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address with proxy support."""
@@ -259,7 +274,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
         
         # Remove server information
-        response.headers.pop('Server', None)
+        if 'Server' in response.headers:
+            del response.headers['Server']
     
     def _create_security_response(self, message: str, status_code: int = 403) -> Response:
         """Create security violation response."""
@@ -276,7 +292,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
         
         # Skip security checks for health endpoints
-        if request.url.path.startswith('/health'):
+        if (request.url.path.startswith('/health') or 
+            request.url.path.startswith('/api/v1/health')):
             response = await call_next(request)
             self._add_security_headers(response)
             return response

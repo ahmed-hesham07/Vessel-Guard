@@ -89,7 +89,35 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     // Log error to monitoring service in production
     if (process.env.NODE_ENV === 'production') {
       console.error('Error caught by boundary:', error, errorInfo)
-      // TODO: Send to error reporting service (Sentry, LogRocket, etc.)
+      
+      // Send to error reporting service
+      this.reportError(error, errorInfo)
+    }
+  }
+
+  reportError = async (error: Error, errorInfo: ErrorInfo) => {
+    try {
+      // Report error to monitoring service
+      // This can be replaced with Sentry, LogRocket, or other services
+      await fetch('/api/errors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: error.message,
+          stack: error.stack,
+          componentStack: errorInfo.componentStack,
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch(() => {
+        // Silently fail if error reporting fails
+        console.warn('Failed to report error to monitoring service')
+      })
+    } catch (reportingError) {
+      console.warn('Error reporting failed:', reportingError)
     }
   }
 

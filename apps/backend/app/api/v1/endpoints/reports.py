@@ -106,7 +106,9 @@ def get_reports(
         ))
     else:
         # Get all reports for organization
-        reports = []
+        reports = report_crud.get_by_organization(
+            db, organization_id=current_user.organization_id, skip=skip, limit=limit
+        )
         total = report_crud.get_report_count_by_organization(
             db, organization_id=current_user.organization_id
         )
@@ -125,7 +127,7 @@ def create_report(
     report_in: ReportCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Create new report and queue for generation.
@@ -193,7 +195,7 @@ def generate_report(
     request: ReportGenerationRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Generate report using simplified request format.
@@ -245,7 +247,7 @@ def generate_batch_reports(
     request: ReportBatchRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Generate reports for multiple vessels.
@@ -544,7 +546,7 @@ def update_report(
     report_id: int,
     report_in: ReportUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["engineer", "organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["engineer", "admin"]))
 ):
     """
     Update report.
@@ -584,7 +586,7 @@ def update_report(
 def deactivate_report(
     report_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Deactivate report (soft delete).

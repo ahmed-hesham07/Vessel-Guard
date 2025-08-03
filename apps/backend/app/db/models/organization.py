@@ -84,6 +84,7 @@ class Organization(Base):
     # Relationships
     users = relationship("User", back_populates="organization")
     projects = relationship("Project", back_populates="organization")
+    tickets = relationship('Ticket', back_populates='organization', cascade='all, delete-orphan')
 
     def __repr__(self) -> str:
         return f"<Organization(id={self.id}, name='{self.name}', subscription='{self.subscription_type}')>"

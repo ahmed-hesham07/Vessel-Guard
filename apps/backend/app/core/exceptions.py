@@ -50,6 +50,16 @@ class ValidationError(VesselGuardException):
     pass
 
 
+class NotFoundError(VesselGuardException):
+    """Exception raised when a resource is not found."""
+    pass
+
+
+class PermissionError(VesselGuardException):
+    """Exception raised when access is denied due to insufficient permissions."""
+    pass
+
+
 class CalculationError(VesselGuardException):
     """Exception raised when engineering calculations fail."""
     pass
@@ -353,6 +363,8 @@ def handle_file_operation_error(error: Exception, operation: str = "unknown") ->
 
 EXCEPTION_STATUS_MAPPING = {
     ValidationError: status.HTTP_422_UNPROCESSABLE_ENTITY,
+    NotFoundError: status.HTTP_404_NOT_FOUND,
+    PermissionError: status.HTTP_403_FORBIDDEN,
     CalculationError: status.HTTP_422_UNPROCESSABLE_ENTITY,
     MaterialNotFoundError: status.HTTP_404_NOT_FOUND,
     InsufficientPermissionError: status.HTTP_403_FORBIDDEN,

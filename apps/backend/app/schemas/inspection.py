@@ -67,6 +67,7 @@ class InspectionUpdate(BaseModel):
     findings: Optional[str] = Field(None, max_length=2000)
     recommendations: Optional[str] = Field(None, max_length=2000)
     result: Optional[str] = Field(None)
+    status: Optional[str] = Field(None, description="Inspection status")
     next_inspection_date: Optional[date] = Field(None)
     inspection_interval_months: Optional[int] = Field(None, ge=1, le=120)
     
@@ -90,6 +91,15 @@ class InspectionUpdate(BaseModel):
             allowed_results = ["pass", "fail", "conditional", "not_applicable"]
             if v not in allowed_results:
                 raise ValueError(f"Result must be one of: {', '.join(allowed_results)}")
+        return v
+    
+    @validator('status')
+    def validate_status(cls, v):
+        """Validate inspection status."""
+        if v is not None:
+            allowed_statuses = ["scheduled", "in_progress", "completed", "cancelled", "overdue"]
+            if v not in allowed_statuses:
+                raise ValueError(f"Status must be one of: {', '.join(allowed_statuses)}")
         return v
 
 

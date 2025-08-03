@@ -11,6 +11,7 @@ pydantic-settings==2.1.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.3.0  # Updated to resolve compatibility warning with passlib
+cryptography==41.0.7  # For data encryption and protection
 python-multipart==0.0.6
 email-validator==2.1.0
 httpx==0.25.2
@@ -61,3 +62,19 @@ sphinx-rtd-theme==1.3.0
 # Development
 python-dotenv==1.0.0
 pre-commit==3.6.0
+
+# Advanced PDF Generation
+reportlab==4.0.4
+jinja2==3.1.2
+PyMuPDF==1.23.8
+
+# File Upload and Processing
+python-multipart==0.0.6
+Pillow==10.0.1
+python-magic==0.4.27
+
+# Real-time Collaboration
+websockets==11.0.3
+
+# Mobile App Support
+fastapi-cors==0.0.6

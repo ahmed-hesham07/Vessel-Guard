@@ -24,11 +24,8 @@ if TYPE_CHECKING:
 
 class UserRole(str, enum.Enum):
     """User roles for role-based access control."""
-    ADMIN = "admin"
-    MANAGER = "manager"
     ENGINEER = "engineer"
-    INSPECTOR = "inspector"
-    VIEWER = "viewer"
+    CONSULTANT = "consultant"
 
 
 class User(Base):
@@ -52,7 +49,7 @@ class User(Base):
     department = Column(String(100), nullable=True)
     
     # Role and permissions
-    role = Column(Enum(UserRole), nullable=False, default=UserRole.VIEWER)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.ENGINEER)
     
     # Account status
     is_active = Column(Boolean, default=True, nullable=False)
@@ -96,6 +93,13 @@ class User(Base):
     
     # Inspections performed by user
     inspections = relationship("Inspection", back_populates="inspector")
+    
+    # Session tracking
+    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+    
+    # Audit trail
+    audit_logs = relationship("AuditLog", back_populates="user")
+    tickets = relationship('Ticket', back_populates='user', cascade='all, delete-orphan')
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email='{self.email}', role='{self.role}')>"
@@ -108,24 +112,24 @@ class User(Base):
     @property
     def is_admin(self) -> bool:
         """Check if user has admin privileges."""
-        return self.role == UserRole.ADMIN or self.is_superuser
+        return self.is_superuser
 
     @property
     def is_manager(self) -> bool:
         """Check if user has manager privileges."""
-        return self.role in [UserRole.ADMIN, UserRole.MANAGER] or self.is_superuser
+        return self.is_superuser
 
     @property
     def can_create_projects(self) -> bool:
         """Check if user can create projects."""
-        return self.role in [UserRole.ADMIN, UserRole.MANAGER, UserRole.ENGINEER]
+        return self.role in [UserRole.ENGINEER, UserRole.CONSULTANT]
 
     @property
     def can_perform_calculations(self) -> bool:
         """Check if user can perform engineering calculations."""
-        return self.role in [UserRole.ADMIN, UserRole.MANAGER, UserRole.ENGINEER]
+        return self.role in [UserRole.ENGINEER, UserRole.CONSULTANT]
 
     @property
     def can_perform_inspections(self) -> bool:
         """Check if user can perform inspections."""
-        return self.role in [UserRole.ADMIN, UserRole.MANAGER, UserRole.ENGINEER, UserRole.INSPECTOR]
+        return self.role in [UserRole.ENGINEER, UserRole.CONSULTANT]

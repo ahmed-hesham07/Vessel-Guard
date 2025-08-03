@@ -2,119 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Mobile-First Responsive Utilities */
+@import '../styles/mobile.css';
+
 @layer base {
   html {
     @apply h-full;
   }
   
   body {
-    @apply h-full bg-gray-50 text-gray-900 antialiased;
+    @apply h-full bg-gray-900 text-gray-100 antialiased;
   }
   
   * {
     @apply border-border;
   }
   :root {
-
     --background: 0 0% 100%;
-
     --foreground: 0 0% 3.9%;
-
     --card: 0 0% 100%;
-
     --card-foreground: 0 0% 3.9%;
-
     --popover: 0 0% 100%;
-
     --popover-foreground: 0 0% 3.9%;
-
     --primary: 0 0% 9%;
-
     --primary-foreground: 0 0% 98%;
-
     --secondary: 0 0% 96.1%;
-
     --secondary-foreground: 0 0% 9%;
-
     --muted: 0 0% 96.1%;
-
     --muted-foreground: 0 0% 45.1%;
-
     --accent: 0 0% 96.1%;
-
     --accent-foreground: 0 0% 9%;
-
     --destructive: 0 84.2% 60.2%;
-
     --destructive-foreground: 0 0% 98%;
-
     --border: 0 0% 89.8%;
-
     --input: 0 0% 89.8%;
-
     --ring: 0 0% 3.9%;
-
     --chart-1: 12 76% 61%;
-
     --chart-2: 173 58% 39%;
-
     --chart-3: 197 37% 24%;
-
     --chart-4: 43 74% 66%;
-
     --chart-5: 27 87% 67%;
-
     --radius: 0.5rem
   }
+  
   .dark {
-
-    --background: 0 0% 3.9%;
-
+    --background: 0 0% 6%;
     --foreground: 0 0% 98%;
-
-    --card: 0 0% 3.9%;
-
+    --card: 0 0% 8%;
     --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 3.9%;
-
+    --popover: 0 0% 8%;
     --popover-foreground: 0 0% 98%;
-
     --primary: 0 0% 98%;
-
     --primary-foreground: 0 0% 9%;
-
-    --secondary: 0 0% 14.9%;
-
+    --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 14.9%;
-
-    --muted-foreground: 0 0% 63.9%;
-
-    --accent: 0 0% 14.9%;
-
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 0 0% 12%;
     --accent-foreground: 0 0% 98%;
-
     --destructive: 0 62.8% 30.6%;
-
     --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 14.9%;
-
-    --input: 0 0% 14.9%;
-
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 0 0% 83.1%;
-
-    --chart-1: 220 70% 50%;
-
-    --chart-2: 160 60% 45%;
-
-    --chart-3: 30 80% 55%;
-
-    --chart-4: 280 65% 60%;
-
-    --chart-5: 340 75% 55%
   }
 }
 
@@ -124,97 +74,605 @@
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
   }
   
   .btn-secondary {
-    @apply bg-secondary-100 text-secondary-900 hover:bg-secondary-200;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
   }
   
   .btn-outline {
-    @apply border border-input bg-transparent hover:bg-accent hover:text-accent-foreground;
+    @apply border border-input hover:bg-accent hover:text-accent-foreground;
   }
   
   .form-input {
-    @apply block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6;
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
   
   .form-label {
-    @apply block text-sm font-medium leading-6 text-gray-900;
+    @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
   }
   
   .card {
-    @apply bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg;
+    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
   }
   
   .card-header {
-    @apply px-4 py-5 sm:px-6 border-b border-gray-200;
+    @apply flex flex-col space-y-1.5 p-6;
   }
   
   .card-content {
-    @apply px-4 py-5 sm:p-6;
+    @apply p-6 pt-0;
   }
   
   .table-container {
-    @apply overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg;
+    @apply w-full overflow-auto;
   }
   
   .table {
-    @apply min-w-full divide-y divide-gray-300;
+    @apply caption-bottom text-sm;
   }
   
   .table-header {
-    @apply bg-gray-50;
+    @apply [&_tr]:border-b;
   }
   
   .table-header-cell {
-    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+    @apply h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0;
   }
   
   .table-body {
-    @apply bg-white divide-y divide-gray-200;
+    @apply [&_tr:last-child]:border-0;
   }
   
   .table-row {
-    @apply hover:bg-gray-50;
+    @apply border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted;
   }
   
   .table-cell {
-    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+    @apply p-4 align-middle [&:has([role=checkbox])]:pr-0;
   }
   
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
   
   .badge-success {
-    @apply bg-green-100 text-green-800;
+    @apply border-transparent bg-green-500 text-white hover:bg-green-500/80;
   }
   
   .badge-warning {
-    @apply bg-yellow-100 text-yellow-800;
+    @apply border-transparent bg-yellow-500 text-white hover:bg-yellow-500/80;
   }
   
   .badge-error {
-    @apply bg-red-100 text-red-800;
+    @apply border-transparent bg-red-500 text-white hover:bg-red-500/80;
   }
   
   .badge-info {
-    @apply bg-blue-100 text-blue-800;
+    @apply border-transparent bg-blue-500 text-white hover:bg-blue-500/80;
   }
   
   .badge-gray {
-    @apply bg-gray-100 text-gray-800;
+    @apply border-transparent bg-gray-500 text-white hover:bg-gray-500/80;
   }
 }
 
-
-
-@layer base {
+@layer utilities {
   * {
     @apply border-border;
   }
+  
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Landing page animations */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
+
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass morphism for dark theme */
+.glass {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Dark theme specific styles */
+.dark-theme {
+  @apply bg-gray-900 text-gray-100;
+}
+
+.dark-card {
+  @apply bg-gray-800 border-gray-700 text-gray-100;
+}
+
+.dark-navbar {
+  @apply bg-gray-900/95 backdrop-blur-sm border-gray-800;
+}
+
+.dark-footer {
+  @apply bg-gray-900 text-gray-100;
+}
+
+.dark-button-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white;
+}
+
+.dark-button-secondary {
+  @apply bg-gray-700 hover:bg-gray-600 text-gray-100;
+}
+
+.dark-button-outline {
+  @apply border-gray-600 text-gray-100 hover:bg-gray-800;
+}
+
+/* High contrast text colors */
+.text-high-contrast {
+  @apply text-gray-100;
+}
+
+.text-medium-contrast {
+  @apply text-gray-300;
+}
+
+.text-low-contrast {
+  @apply text-gray-400;
+}
+
+/* Dark theme gradients */
+.dark-gradient-primary {
+  @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900;
+}
+
+.dark-gradient-secondary {
+  @apply bg-gradient-to-r from-blue-900 to-purple-900;
+}
+
+.dark-gradient-accent {
+  @apply bg-gradient-to-r from-blue-600 to-purple-600;
+}
+
+/* Enhanced Glass Morphism for Professional Dark UI */
+.glass-pro {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.37);
+}
+
+/* Quiet Glass Variants */
+.glass-subtle {
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.05);
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+/* Advanced Card Hover Effects */
+.card-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-lift:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Psychological Color Psychology Classes */
+.trust-color {
+  @apply text-blue-400;
+}
+
+.success-color {
+  @apply text-emerald-400;
+}
+
+.urgency-color {
+  @apply text-amber-400;
+}
+
+.authority-color {
+  @apply text-purple-400;
+}
+
+.premium-color {
+  @apply text-cyan-400;
+}
+
+/* Enhanced Progress Bars */
+.progress-glow {
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* Micro-interactions */
+.micro-bounce:hover {
+  animation: micro-bounce 0.6s ease-in-out;
+}
+
+@keyframes micro-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* Professional Engineering Accent Lines */
+.engineering-accent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, #06b6d4, #3b82f6);
+  border-radius: 2px;
+}
+
+/* Eye-comfort Dark Mode Adjustments */
+.eye-comfort {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.eye-comfort-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+/* Status Indicator Pulse */
+.status-pulse {
+  animation: status-pulse 2s infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* === PSYCHOLOGICAL MARKETING DESIGN SYSTEM === */
+
+/* Clean Psychological Color Psychology */
+.psych-trust {
+  @apply text-blue-400;
+}
+
+.psych-success {
+  @apply text-emerald-400;
+}
+
+.psych-urgency {
+  @apply text-amber-400;
+}
+
+.psych-authority {
+  @apply text-purple-400;
+}
+
+.psych-premium {
+  @apply text-cyan-400;
+}
+
+.psych-social {
+  @apply text-green-400;
+}
+
+/* Subtle Psychological Backgrounds */
+.psych-bg-trust {
+  @apply bg-blue-500/10 border-blue-500/20;
+}
+
+.psych-bg-success {
+  @apply bg-emerald-500/10 border-emerald-500/20;
+}
+
+.psych-bg-urgency {
+  @apply bg-amber-500/10 border-amber-500/20;
+}
+
+.psych-bg-authority {
+  @apply bg-purple-500/10 border-purple-500/20;
+}
+
+.psych-bg-premium {
+  @apply bg-cyan-500/10 border-cyan-500/20;
+}
+
+/* Clean Social Proof Elements */
+.social-proof-counter {
+  @apply text-lg font-bold;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.social-proof-subtle {
+  @apply text-xs text-slate-400 flex items-center space-x-1;
+}
+
+/* Authority Indicators */
+.authority-badge {
+  @apply inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-medium;
+}
+
+.certification-mark {
+  @apply inline-flex items-center space-x-1 px-2 py-1 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs;
+}
+
+/* Scarcity & Urgency (Subtle) */
+.urgency-subtle {
+  @apply relative;
+}
+
+.urgency-subtle::before {
+  content: '';
+  @apply absolute -left-2 top-1/2 transform -translate-y-1/2 w-1 h-4 bg-amber-400 rounded-full opacity-60;
+}
+
+.scarcity-indicator {
+  @apply text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full border border-amber-500/20;
+}
+
+/* Clean Progress Indicators */
+.progress-clean {
+  @apply w-full h-1.5 bg-slate-700 rounded-full overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000 ease-out;
+  filter: drop-shadow(0 0 4px rgba(6, 182, 212, 0.3));
+}
+
+/* Quiet Achievement System */
+.achievement-quiet {
+  @apply inline-flex items-center space-x-1 text-xs text-slate-300;
+}
+
+.achievement-unlock {
+  @apply inline-flex items-center space-x-1 text-xs font-medium;
+  color: #fbbf24;
+}
+
+/* Professional Micro-interactions */
+.micro-lift {
+  @apply transition-all duration-200 ease-out;
+}
+
+.micro-lift:hover {
+  @apply -translate-y-0.5 shadow-lg;
+}
+
+.micro-glow:hover {
+  @apply shadow-lg;
+  filter: drop-shadow(0 4px 12px rgba(6, 182, 212, 0.15));
+}
+
+/* Clean Card Hierarchy */
+.card-primary {
+  @apply bg-gradient-to-br from-slate-800/60 to-slate-900/60 border-slate-700/50 backdrop-blur-sm;
+}
+
+.card-secondary {
+  @apply bg-slate-800/30 border-slate-700/30 backdrop-blur-sm;
+}
+
+.card-accent {
+  @apply bg-gradient-to-br from-slate-800/70 to-slate-900/70 border-cyan-500/20 backdrop-blur-sm;
+}
+
+/* Quiet Trust Signals */
+.trust-signal {
+  @apply inline-flex items-center space-x-1 text-xs text-slate-400;
+}
+
+.verification-mark {
+  @apply w-3 h-3 text-emerald-400;
+}
+
+/* Clean Typography Hierarchy */
+.heading-primary {
+  @apply text-3xl md:text-4xl font-bold text-slate-100 leading-tight;
+}
+
+.heading-secondary {
+  @apply text-xl md:text-2xl font-semibold text-slate-100;
+}
+
+.heading-tertiary {
+  @apply text-lg font-semibold text-slate-100;
+}
+
+.text-primary {
+  @apply text-slate-100;
+}
+
+.text-secondary {
+  @apply text-slate-300;
+}
+
+.text-tertiary {
+  @apply text-slate-400;
+}
+
+.text-accent {
+  @apply text-cyan-400;
+}
+
+/* Psychological Spacing System */
+.psych-section {
+  @apply py-12 md:py-16;
+}
+
+.psych-container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Clean Call-to-Action Styles */
+.cta-primary {
+  @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl;
+}
+
+.cta-secondary {
+  @apply bg-slate-700/50 hover:bg-slate-600/50 text-slate-100 font-medium border border-slate-600/50 hover:border-slate-500/50 transition-all duration-200;
+}
+
+.cta-ghost {
+  @apply text-slate-300 hover:text-slate-100 hover:bg-slate-800/50 font-medium transition-all duration-200;
+}
+
+/* Quiet Notification System */
+.notification-success {
+  @apply bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg p-3;
+}
+
+.notification-info {
+  @apply bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg p-3;
+}
+
+.notification-warning {
+  @apply bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg p-3;
+}
+
+/* Clean Status Indicators */
+.status-live {
+  @apply inline-flex items-center space-x-1 text-xs text-emerald-400;
+}
+
+.status-live::before {
+  content: '';
+  @apply w-2 h-2 bg-emerald-500 rounded-full animate-pulse;
+}
+
+.status-active {
+  @apply inline-flex items-center space-x-1 text-xs text-cyan-400;
+}
+
+.status-pending {
+  @apply inline-flex items-center space-x-1 text-xs text-amber-400;
+}
+
+/* Professional Gradients */
+.gradient-primary {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #0891b2 0%, #3b82f6 100%);
+}
+
+/* Clean Borders & Dividers */
+.border-clean {
+  @apply border-slate-700/30;
+}
+
+.divider-clean {
+  @apply h-px bg-gradient-to-r from-transparent via-slate-700/50 to-transparent;
+}
+
+/* Responsive Psychological Spacing */
+@media (max-width: 768px) {
+  .psych-section {
+    @apply py-8;
+  }
+  
+  .heading-primary {
+    @apply text-2xl;
+  }
+  
+  .heading-secondary {
+    @apply text-xl;
   }
 }

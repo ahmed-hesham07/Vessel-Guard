@@ -9,22 +9,54 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 
 from sqlalchemy import and_, or_, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.crud.base import CRUDBase
 from app.db.models.calculation import Calculation
 from app.schemas.calculation import CalculationCreate, CalculationUpdate
+from app.services.cache_service import cached_query, cache_service, CACHE_CONFIGS
 
 
 class CRUDCalculation(CRUDBase[Calculation, CalculationCreate, CalculationUpdate]):
-    """CRUD operations for calculations."""
+    """CRUD operations for calculations with performance optimizations."""
 
+    def create(self, db: Session, *, obj_in: CalculationCreate, user_id: int) -> Calculation:
+        """Create calculation and invalidate related cache."""
+        result = super().create(db, obj_in=obj_in)
+        # Invalidate related caches
+        self._invalidate_calculation_cache(result.vessel_id, result.project_id)
+        return result
+
+    def update(self, db: Session, *, db_obj: Calculation, obj_in: CalculationUpdate) -> Calculation:
+        """Update calculation and invalidate related cache."""
+        result = super().update(db, db_obj=db_obj, obj_in=obj_in)
+        # Invalidate related caches
+        self._invalidate_calculation_cache(result.vessel_id, result.project_id)
+        return result
+
+    def remove(self, db: Session, *, id: int) -> Calculation:
+        """Remove calculation and invalidate related cache."""
+        calc = self.get(db, id=id)
+        result = super().remove(db, id=id)
+        if calc:
+            self._invalidate_calculation_cache(calc.vessel_id, calc.project_id)
+        return result
+
+    def _invalidate_calculation_cache(self, vessel_id: int, project_id: int):
+        """Invalidate calculation-related cache entries."""
+        cache_service.invalidate_query_cache("calculations_by_vessel")
+        cache_service.invalidate_query_cache("recent_calculations")
+        cache_service.invalidate_query_cache("calculations_by_project")
+        cache_service.invalidate_query_cache("dashboard")
+
+    @cached_query("calculations_by_vessel", ttl=300)
     def get_by_vessel(
         self, db: Session, *, vessel_id: int, skip: int = 0, limit: int = 100
     ) -> List[Calculation]:
-        """Get calculations for a vessel."""
+        """Get calculations for a vessel with caching."""
         return (
             db.query(self.model)
+            .options(selectinload(self.model.vessel), selectinload(self.model.calculated_by))
             .filter(
                 and_(
                     self.model.vessel_id == vessel_id,
@@ -82,6 +114,7 @@ class CRUDCalculation(CRUDBase[Calculation, CalculationCreate, CalculationUpdate
             .all()
         )
 
+    @cached_query("recent_calculations", ttl=180)  # 3 minutes for recent data
     def get_recent_calculations(
         self, 
         db: Session, 
@@ -90,13 +123,18 @@ class CRUDCalculation(CRUDBase[Calculation, CalculationCreate, CalculationUpdate
         days: int = 30,
         limit: int = 10
     ) -> List[Calculation]:
-        """Get recent calculations for organization."""
+        """Get recent calculations for organization with caching."""
         from datetime import timedelta
         cutoff_date = datetime.utcnow() - timedelta(days=days)
         
         return (
             db.query(self.model)
             .join(self.model.vessel)
+            .options(
+                selectinload(self.model.vessel),
+                selectinload(self.model.calculated_by),
+                selectinload(self.model.project)
+            )
             .filter(
                 and_(
                     self.model.vessel.has(organization_id=organization_id),
@@ -327,4 +365,4 @@ class CRUDCalculation(CRUDBase[Calculation, CalculationCreate, CalculationUpdate
         )
 
 
-calculation = CRUDCalculation(Calculation)
+calculation_crud = CRUDCalculation(Calculation)

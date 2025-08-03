@@ -103,16 +103,30 @@ class ProjectInDBBase(ProjectBase):
     
     id: int
     organization_id: int
-    created_by_id: int
-    updated_by_id: Optional[int]
+    owner_id: int  # Maps to created_by_id in frontend
     status: str
     start_date: Optional[datetime]
-    end_date: Optional[datetime]
-    actual_end_date: Optional[datetime]
-    budget: Optional[float]
-    is_active: bool
+    target_completion_date: Optional[datetime]  # Maps to end_date in frontend
+    actual_completion_date: Optional[datetime]  # Maps to actual_end_date in frontend
     created_at: datetime
     updated_at: Optional[datetime]
+    
+    # Optional fields that exist in the model
+    client_contact: Optional[str] = None
+    client_email: Optional[str] = None
+    client_phone: Optional[str] = None
+    priority: Optional[str] = None
+    engineering_standards: Optional[dict] = None
+    design_codes: Optional[dict] = None
+    operating_environment: Optional[str] = None
+    default_units: Optional[str] = None
+    pressure_units: Optional[str] = None
+    temperature_units: Optional[str] = None
+    tags: Optional[dict] = None
+    category: Optional[str] = None
+    requires_certification: Optional[bool] = None
+    certification_body: Optional[str] = None
+    certification_requirements: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -143,11 +157,15 @@ class ProjectSummary(BaseModel):
     project_number: Optional[str]
     status: str
     client_name: Optional[str]
-    end_date: Optional[datetime]
-    is_active: bool
+    target_completion_date: Optional[datetime]  # Maps to end_date in frontend
 
     class Config:
         from_attributes = True
+        
+    @property
+    def is_active(self) -> bool:
+        """Check if project is currently active."""
+        return self.status in ["active"]
 
 
 class ProjectList(BaseModel):
@@ -175,8 +193,8 @@ class ProjectTimeline(BaseModel):
     
     project_id: int
     start_date: Optional[datetime]
-    end_date: Optional[datetime]
-    actual_end_date: Optional[datetime]
+    target_completion_date: Optional[datetime]  # Maps to end_date in frontend
+    actual_completion_date: Optional[datetime]  # Maps to actual_end_date in frontend
     duration_days: Optional[int]
     remaining_days: Optional[int]
     progress_percentage: float

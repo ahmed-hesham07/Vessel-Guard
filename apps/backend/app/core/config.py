@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Vessel Guard API"
     VERSION: str = "1.0.0"
+    ENVIRONMENT: str = "development"
     DESCRIPTION: str = "Pressure Vessel Integrity Analysis and Compliance Platform"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -51,28 +52,39 @@ class Settings(BaseSettings):
     POSTGRES_PORT: str = "5432"
     DATABASE_URL: Optional[str] = None
     
-    # Fly.io specific database configuration
-    FLY_DATABASE_URL: Optional[str] = None
+    # SSL Configuration for Aiven
+    POSTGRES_SSL_MODE: str = "disable"  # Can be: disable, require, verify-ca, verify-full
+    POSTGRES_SSL_CERT_PATH: Optional[str] = None
     
     @validator("DATABASE_URL", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
-        
-        # Check for Fly.io DATABASE_URL first (provided by postgres attach)
-        if values.get("FLY_DATABASE_URL"):
-            return values.get("FLY_DATABASE_URL")
-        
         # For PostgreSQL connections, build the URL
         if values.get("POSTGRES_SERVER") and values.get("POSTGRES_DB"):
-            return PostgresDsn.build(
-                scheme="postgresql+psycopg2",
-                user=values.get("POSTGRES_USER"),
-                password=values.get("POSTGRES_PASSWORD"),
-                host=values.get("POSTGRES_SERVER"),
-                port=values.get("POSTGRES_PORT"),
-                path=f"/{values.get('POSTGRES_DB') or ''}",
-            )
+            # Build base URL manually for better compatibility
+            user = values.get("POSTGRES_USER", "postgres")
+            password = values.get("POSTGRES_PASSWORD", "")
+            host = values.get("POSTGRES_SERVER", "localhost")
+            port = values.get("POSTGRES_PORT", "5432")
+            database = values.get("POSTGRES_DB", "")
+            
+            # Build the connection string
+            if password:
+                base_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
+            else:
+                base_url = f"postgresql+psycopg2://{user}@{host}:{port}/{database}"
+            
+            # Add SSL parameters if required
+            ssl_mode = values.get("POSTGRES_SSL_MODE", "disable")
+            if ssl_mode != "disable":
+                ssl_params = f"?sslmode={ssl_mode}"
+                ssl_cert_path = values.get("POSTGRES_SSL_CERT_PATH")
+                if ssl_cert_path:
+                    ssl_params += f"&sslrootcert={ssl_cert_path}"
+                base_url += ssl_params
+            
+            return base_url
         # For development with SQLite, return a simple string
         return "sqlite:///./vessel_guard_dev.db"
     
@@ -156,7 +168,7 @@ class Settings(BaseSettings):
     TEST_DATABASE_URL: Optional[str] = None
     
     class Config:
-        env_file = ".env"
+        env_file = "dev.env"
         case_sensitive = True
         extra = "ignore"  # Allow extra fields in environment
 

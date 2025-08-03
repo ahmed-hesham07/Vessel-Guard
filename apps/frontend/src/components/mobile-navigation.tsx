@@ -1,10 +1,13 @@
 'use client'
 
+import { Fragment } from 'react'
+
+import { Dialog, Transition } from '@headlessui/react'
+import { X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   Home,
   Shield,
@@ -13,21 +16,25 @@ import {
   Users,
   Settings,
   BarChart3,
-  BookOpen,
   HelpCircle,
   Building,
-  Wrench,
   Activity,
-  X,
-  LogOut
+  Zap,
+  FileText
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navigation = [
   {
-    name: 'Overview',
+    name: 'Dashboard',
     href: '/dashboard',
     icon: Home,
+  },
+  {
+    name: 'Quick Workflow',
+    href: '/dashboard/workflow/new',
+    icon: Zap,
+    badge: 'New'
   },
   {
     name: 'Projects',
@@ -35,29 +42,14 @@ const navigation = [
     icon: Building,
   },
   {
-    name: 'Vessels',
-    href: '/dashboard/vessels',
-    icon: Shield,
-  },
-  {
-    name: 'Calculations',
-    href: '/calculations',
-    icon: Calculator,
-  },
-  {
-    name: 'Inspections',
-    href: '/dashboard/inspections',
-    icon: FileCheck,
-  },
-  {
     name: 'Reports',
     href: '/reports',
     icon: BarChart3,
   },
   {
-    name: 'Standards',
-    href: '/standards',
-    icon: BookOpen,
+    name: 'Inspections',
+    href: '/dashboard/inspections',
+    icon: FileCheck,
   },
 ]
 
@@ -79,6 +71,14 @@ const bottomNavigation = [
   },
 ]
 
+const adminNavigation = [
+  {
+    name: 'System Health',
+    href: '/health',
+    icon: Activity,
+  },
+]
+
 interface MobileNavigationProps {
   isOpen: boolean
   onClose: () => void
@@ -86,124 +86,207 @@ interface MobileNavigationProps {
 
 export default function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
   const pathname = usePathname()
-  const { user, logout } = useAuth()
-
-  const handleLogout = async () => {
-    await logout()
-    onClose()
-  }
-
-  if (!isOpen) return null
+  const { user } = useAuth()
 
   return (
-    <div className="md:hidden">
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 z-40 bg-black bg-opacity-50"
-        onClick={onClose}
-      />
+    <Transition.Root show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50 md:hidden" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-in-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in-out duration-300"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" />
+        </Transition.Child>
 
-      {/* Navigation panel */}
-      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl">
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center space-x-2">
-              <Shield className="h-6 w-6 text-blue-600" />
-              <span className="font-semibold text-gray-900">Vessel Guard</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="fixed inset-0 z-40 flex">
+          <Transition.Child
+            as={Fragment}
+            enter="transition ease-in-out duration-300 transform"
+            enterFrom="-translate-x-full"
+            enterTo="translate-x-0"
+            leave="transition ease-in-out duration-300 transform"
+            leaveFrom="translate-x-0"
+            leaveTo="-translate-x-full"
+          >
+            <Dialog.Panel className="relative flex w-full max-w-xs flex-1 flex-col bg-white">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-in-out duration-300"
+                enterFrom="opacity-0"
+                enterTo="opacity-100"
+                leave="ease-in-out duration-300"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
+              >
+                <div className="absolute top-0 right-0 -mr-12 pt-2">
+                  <button
+                    type="button"
+                    className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                    onClick={onClose}
+                  >
+                    <span className="sr-only">Close sidebar</span>
+                    <X className="h-6 w-6 text-white" aria-hidden="true" />
+                  </button>
+                </div>
+              </Transition.Child>
 
-          {/* User info */}
-          <div className="p-4 border-b">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-white">
-                  {user?.email?.[0]?.toUpperCase() || 'U'}
-                </span>
+              <div className="flex flex-shrink-0 items-center px-4 pt-5">
+                <Shield className="h-8 w-8 text-blue-600" />
+                <span className="ml-2 text-xl font-bold text-gray-900">Vessel Guard</span>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  {user?.email?.split('@')[0] || 'User'}
-                </p>
-                <p className="text-xs text-gray-500">Engineering Team</p>
+
+              {/* User info */}
+              <div className="mt-5 px-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-white">
+                        {user?.email?.[0]?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      {user?.email?.split('@')[0] || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-500">Engineering Team</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                    isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  )}
-                  onClick={onClose}
-                >
-                  <Icon className="mr-3 h-5 w-5" />
-                  {item.name}
-                  {item.name === 'Calculations' && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
-                      New
-                    </Badge>
-                  )}
+              {/* Quick Workflow CTA */}
+              <div className="mt-6 px-4">
+                <Link href="/dashboard/workflow/new" onClick={onClose}>
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-lg shadow-lg">
+                    <div className="flex items-center space-x-3">
+                      <Zap className="h-5 w-5" />
+                      <div>
+                        <p className="text-sm font-semibold">Quick Workflow</p>
+                        <p className="text-xs text-blue-100">Streamline your process</p>
+                      </div>
+                    </div>
+                  </div>
                 </Link>
-              )
-            })}
-          </nav>
+              </div>
 
-          {/* Bottom navigation */}
-          <div className="border-t p-4 space-y-1">
-            {bottomNavigation.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                    isActive
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  )}
-                  onClick={onClose}
-                >
-                  <Icon className="mr-3 h-5 w-5" />
-                  {item.name}
-                </Link>
-              )
-            })}
-            
-            <Button
-              variant="ghost"
-              className="w-full justify-start px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              onClick={handleLogout}
-            >
-              <LogOut className="mr-3 h-5 w-5" />
-              Sign out
-            </Button>
+              <div className="mt-8 flex flex-1 flex-col">
+                <nav className="flex-1 space-y-1 px-2">
+                  {navigation.map((item) => {
+                    const Icon = item.icon
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                    
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={onClose}
+                        className={cn(
+                          'group flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors',
+                          isActive
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            'mr-4 flex-shrink-0 h-6 w-6',
+                            isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+                          )}
+                        />
+                        {item.name}
+                        {item.badge && (
+                          <Badge variant="secondary" className="ml-auto text-xs bg-blue-100 text-blue-800">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </nav>
+
+                {/* Bottom navigation */}
+                <div className="flex-shrink-0 border-t border-gray-200 p-4">
+                  <div className="space-y-1">
+                    {/* Admin navigation */}
+                    {(user as any)?.role === 'admin' && (
+                      <>
+                        <div className="mb-2">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-2">
+                            Administration
+                          </p>
+                        </div>
+                        {adminNavigation.map((item) => {
+                          const Icon = item.icon
+                          const isActive = pathname === item.href
+                          
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={onClose}
+                              className={cn(
+                                'group flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors',
+                                isActive
+                                  ? 'bg-gray-100 text-gray-900'
+                                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  'mr-4 flex-shrink-0 h-6 w-6',
+                                  isActive ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
+                                )}
+                              />
+                              {item.name}
+                            </Link>
+                          )
+                        })}
+                        <div className="border-t border-gray-200 my-2" />
+                      </>
+                    )}
+                    
+                    {/* Regular bottom navigation */}
+                    {bottomNavigation.map((item) => {
+                      const Icon = item.icon
+                      const isActive = pathname === item.href
+                      
+                      return (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          onClick={onClose}
+                          className={cn(
+                            'group flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors',
+                            isActive
+                              ? 'bg-gray-100 text-gray-900'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              'mr-4 flex-shrink-0 h-6 w-6',
+                              isActive ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
+                            )}
+                          />
+                          {item.name}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </Dialog.Panel>
+          </Transition.Child>
+          <div className="w-14 flex-shrink-0" aria-hidden="true">
+            {/* Force sidebar to shrink to fit close icon */}
           </div>
         </div>
-      </div>
-    </div>
+      </Dialog>
+    </Transition.Root>
   )
 }

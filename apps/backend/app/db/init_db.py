@@ -72,7 +72,7 @@ async def create_initial_data(db: Session) -> None:
             hashed_password=get_password_hash("admin123!"),
             first_name="System",
             last_name="Administrator",
-            role=UserRole.ADMIN,
+            role=UserRole.ENGINEER,
             is_active=True,
             is_verified=True,
             organization_id=default_org.id
@@ -126,18 +126,11 @@ async def create_sample_data(db: Session) -> None:
             "role": UserRole.ENGINEER
         },
         {
-            "email": "inspector@vesselguard.com", 
-            "password": "inspector123!",
+            "email": "consultant@vesselguard.com", 
+            "password": "consultant123!",
             "first_name": "Jane",
-            "last_name": "Inspector",
-            "role": UserRole.INSPECTOR
-        },
-        {
-            "email": "manager@vesselguard.com",
-            "password": "manager123!",
-            "first_name": "Bob",
-            "last_name": "Manager", 
-            "role": UserRole.MANAGER
+            "last_name": "Consultant",
+            "role": UserRole.CONSULTANT
         }
     ]
     

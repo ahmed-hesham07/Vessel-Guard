@@ -40,7 +40,7 @@ def get_organizations(
     tier: Optional[str] = Query(None),
     active_only: bool = Query(True),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Get all organizations (Super Admin only).
@@ -168,7 +168,7 @@ def get_my_organization(
 @router.get("/usage-stats", response_model=OrganizationUsageStats)
 def get_organization_usage_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Get organization usage statistics.
@@ -260,7 +260,7 @@ def update_organization(
     organization_id: int,
     organization_in: OrganizationUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["organization_admin", "super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Update organization.
@@ -309,7 +309,7 @@ def update_organization_subscription(
     organization_id: int,
     subscription_in: OrganizationSubscriptionUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Update organization subscription (Super Admin only).
@@ -338,7 +338,7 @@ def update_organization_subscription(
 def deactivate_organization(
     organization_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Deactivate organization and all its members (Super Admin only).
@@ -358,7 +358,7 @@ def deactivate_organization(
 def reactivate_organization(
     organization_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Reactivate organization (Super Admin only).
@@ -378,7 +378,7 @@ def reactivate_organization(
 def reset_monthly_usage(
     organization_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Reset monthly usage counters (Super Admin only).
@@ -397,7 +397,7 @@ def reset_monthly_usage(
 @router.get("/expired/subscriptions", response_model=List[OrganizationSummary])
 def get_expired_subscriptions(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["super_admin"]))
+    current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Get organizations with expired subscriptions (Super Admin only).

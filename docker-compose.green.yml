@@ -1,0 +1,62 @@
+# Green environment deployment for blue-green deployments
+version: '3.8'
+
+services:
+  backend:
+    container_name: vessel-guard-backend-green
+    ports:
+      - "8001:8000"  # Different port for green environment
+    environment:
+      - DEPLOYMENT_COLOR=green
+    labels:
+      - "traefik.http.routers.backend-green.rule=Host(`green.vessel-guard.com`)"
+      - "traefik.http.routers.backend-green.service=backend-green"
+      - "traefik.http.services.backend-green.loadbalancer.server.port=8000"
+      - "deployment.color=green"
+    networks:
+      - vessel-guard-network
+
+  frontend:
+    container_name: vessel-guard-frontend-green
+    ports:
+      - "3001:3000"  # Different port for green environment
+    environment:
+      - NEXT_PUBLIC_API_URL=http://green.vessel-guard.com:8001
+      - DEPLOYMENT_COLOR=green
+    labels:
+      - "traefik.http.routers.frontend-green.rule=Host(`green.vessel-guard.com`)"
+      - "traefik.http.routers.frontend-green.service=frontend-green"
+      - "traefik.http.services.frontend-green.loadbalancer.server.port=3000"
+      - "deployment.color=green"
+    networks:
+      - vessel-guard-network
+
+  # Health check service for green environment
+  healthcheck-green:
+    image: alpine/curl:latest
+    container_name: vessel-guard-healthcheck-green
+    command: |
+      sh -c '
+        echo "Waiting for green services to be ready..."
+        while ! curl -f http://vessel-guard-backend-green:8000/api/v1/health; do
+          echo "Backend not ready, waiting..."
+          sleep 5
+        done
+        echo "Green backend is healthy!"
+        
+        while ! curl -f http://vessel-guard-frontend-green:3000; do
+          echo "Frontend not ready, waiting..."
+          sleep 5
+        done
+        echo "Green frontend is healthy!"
+        echo "Green environment is fully operational!"
+      '
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - vessel-guard-network
+
+networks:
+  vessel-guard-network:
+    external: true

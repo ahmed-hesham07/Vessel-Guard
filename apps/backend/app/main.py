@@ -56,6 +56,28 @@ app = FastAPI(
 
 # Add middleware (order matters - they execute in reverse order of addition)
 
+# Response optimization middleware (should be last to optimize all responses)
+from app.middleware.response_optimization import (
+    ResponseCompressionMiddleware,
+    CacheHeadersMiddleware,
+    FieldSelectionMiddleware,
+    ResponseTimeMiddleware,
+    ResponseSizeMiddleware
+)
+app.add_middleware(ResponseSizeMiddleware)
+app.add_middleware(ResponseTimeMiddleware)
+app.add_middleware(FieldSelectionMiddleware)
+app.add_middleware(CacheHeadersMiddleware)
+app.add_middleware(ResponseCompressionMiddleware)
+
+# Enhanced security middleware (should be early for protection)
+from app.middleware.enhanced_security import EnhancedSecurityMiddleware
+app.add_middleware(EnhancedSecurityMiddleware)
+
+# Audit middleware (should be early to capture all requests)
+from app.middleware.audit_middleware import AuditMiddleware
+app.add_middleware(AuditMiddleware)
+
 # Error logging middleware (should be early to catch all errors)
 app.add_middleware(ErrorLoggingMiddleware, log_all_requests=settings.DEBUG)
 
@@ -63,12 +85,12 @@ app.add_middleware(ErrorLoggingMiddleware, log_all_requests=settings.DEBUG)
 performance_middleware = PerformanceMiddleware(app)
 app.add_middleware(PerformanceMiddleware)
 
-# Security middleware (temporarily disabled for development)
-# app.add_middleware(SecurityMiddleware)
+# Security middleware (basic security headers)
+app.add_middleware(SecurityMiddleware)
 
-# Rate limiting (disabled - Redis not available)
-# redis_url = getattr(settings, 'REDIS_URL', None)
-# app.add_middleware(RateLimitMiddleware, redis_url=redis_url)
+# Rate limiting (using in-memory rate limiter for development)
+from app.middleware.rate_limiting_new import RateLimitMiddleware
+app.add_middleware(RateLimitMiddleware, redis_url=None)  # None triggers in-memory mode
 
 # CORS middleware
 app.add_middleware(
@@ -168,39 +190,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    from app.db.connection import db_manager
-    
-    health_status = {
+    return {
         "status": "healthy",
         "timestamp": time.time(),
-        "environment": settings.ENVIRONMENT,
-        "checks": {
-            "database": "unknown",
-            "api": "healthy"
-        }
+        "app_name": settings.APP_NAME,
+        "version": settings.VERSION
     }
-    
-    # Check database connection
-    try:
-        db_healthy = db_manager.test_connection()
-        health_status["checks"]["database"] = "healthy" if db_healthy else "unhealthy"
-        
-        if db_healthy:
-            db_info = db_manager.get_connection_info()
-            health_status["database_info"] = {
-                "type": db_info.get("database_type", "unknown"),
-                "database": db_info.get("database", "unknown")
-            }
-    except Exception as e:
-        health_status["checks"]["database"] = "unhealthy"
-        health_status["database_error"] = str(e)
-        logger.error(f"Health check database error: {e}")
-    
-    # Set overall status
-    if health_status["checks"]["database"] != "healthy":
-        health_status["status"] = "unhealthy"
-    
-    return health_status
 
 
 if __name__ == "__main__":
